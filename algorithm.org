@@ -1,0 +1,130 @@
+#+options: ^:nil
+* non modifie
+  - [(all)(any)(none)]_of
+    - [(all)(any)(none)]_of(beg, end, p)
+  - foreach(_n)
+    - foreach(beg, end, f)
+    - foreach_n(beg, n, f)
+  - [(find)(count)](_if(_not))
+    - [(count)(find)](beg, end, v)
+    - [(count)(find)]_if(beg, end, p)
+    - find_if_not(beg, end, np)
+  - search(_n)/find_end
+    - search(begp, endp, begs, ends)
+    - search_n(beg, end, n, v)
+    - find_end(begp, endp, begs, ends)
+  - mismatch
+    - mismatch(bega, enda, begb)
+  - adjacent_find
+    - adjacent_find(beg, end)
+* modifie
+  - [(fill)(generate)](_n)
+    - fill(beg, end, v)
+    - fill_n(beg, count, v)
+    - generate(beg, end, g)
+    - generate_n(beg, count, g)
+  - [(remove)(replace)](_if)
+    - remove(beg, end, v)
+    - remove_if(beg, end, p)
+    - replace(beg, end, v, nv)
+    - replace_if(beg, end, p, nv)
+  - reverse/rotate/shuffle
+    - reverse(beg, end)
+    - rotate(beg, nbeg, end)
+    - shuffle(beg, end, g)
+  - unique/shift_[(left)(right)]
+    - unique(beg, end)
+    - shift_[(left)(right)](beg, end, n)
+* modifie to
+  - copy([(_backward)(_if)(_n)])
+    - copy(_backward)(beg, end, to)
+    - copy_if(beg, end, to, p)
+    - copy_n(beg, count, to)
+  - transform
+    - transform(beg, end, to, f)
+  - [(remove)(replace)]_copy(_if)
+    - remove_copy(beg, end, to, v)
+    - remove_copy_if(beg, end, to, p)
+    - replace_copy(beg, end, to, v, nv)
+    - replace_copy_if(beg, end, to, p, nv)
+  - [(reverse)(rotate)]_copy/sample
+    - reverse_copy(beg, end, to)
+    - rotate_copy(beg, nbeg, end, to)
+    - sample(beg, end, to, n, g)
+  - unique_copy
+    - unique_copy(beg, end, to)
+* move/swap
+  - move(_backward)
+    - move(_backward)(beg, end, to)
+  - (iter_)swap(_range)
+    - swap(a, b)
+    - iter_swap(ia, ib)
+    - swap_range(bega, enda, begb, enda)
+* partition
+  - is_partitioned(beg, end, p)
+  - partition_point(beg, end, p)
+  - (stable_)partition(_copy)
+    - (stable_)partition(beg, end, p)
+    - partition_copy(beg, end, trueto, falseto, p)
+* sort
+  - is_sorted(_until)
+    - is_sorted(_until)(beg, end)
+  - (stable_)sort
+    - (stable_)sort(beg, end)
+  - partial_sort(_copy)
+    - partial_sort(beg, mid, end)
+    - partial_sort_copy(beg, end, begto, endto)
+  - nth_element
+    - nth_element(beg, inth, end)
+* search on sort
+  - [(lower)(upper)]_bound/equal_range
+    - [(lower)(upper)]_bound/equal_range(beg, end, v)
+  - binary_search
+    - binary_search(beg, end, v)
+  - merge(_inplace)
+    - merge(bega, enda, begb, endb, to)
+    - merge_inplace(beg, mid, end)
+* set on sort
+  - includes
+    - includes(begp, endp, begs, ends)
+  - set_[(union(并)(intersection(交))(difference(差))(symmetric_difference(带权差, 前权 - 后权 > 0))]
+    - set_[(union)(intersection)((symmetric_)difference)](bega, enda, begb, endb, to)
+* equal
+  - equal
+    - equal(beg, end, equalto)
+  - lexicographical_compare(_3way)
+    - lexicographical_compare(_3way)(bega, enda, begb, endb)
+* max/min
+  - max/min/minmax
+    - max/min/minmax(a, b)
+  - [(max)(min)(minmax)]_element
+    - [(max)(min)(max)]_element(beg, end)
+  - clamp
+    - clamp(x, a, b) x<a?a:(x>b?b:x)
+* heap
+  - is_heap(_until)
+    - is_heap(_until)(beg, end)
+  - make_heap
+    - make_heap(beg, end)
+  - [(push)(pop)]_heap
+    - [(push)(pop)]_heap(beg, end) (heap: beg~end-2, elem: end-1)
+  - sort_heap
+    - sort_heap(beg, end) (heap: beg~end-1)
+* permutation
+  - is_permutation
+    - is_permutation(beg, end, equalto)
+  - [(next)(prev)]_permutation
+    - [(next)(prev)]_permutation(beg, end)
+* numeric
+  - itoa
+    - itoa(beg, end, v)
+  - reduce/accumulate (reduce 并行, 结合律限制)
+    - reduce(beg, end)
+    - reduce/accumulate(beg, end, v)
+  - transform_reduce/inner_product (同上)
+    - transform_reduce/inner_product(bega, enda, begb, v)
+  - partial_sum/adjacent_difference
+    - partial_sum/adjacent_difference(beg, end, to)
+  - (transform_)[(exclusive)(inclusive)]_scan
+    - [(exclusive)(inclusive)]_scan(beg, end, to, v)
+    - transform_[(exclusive)(inclusive)]_scan(beg, end, to, v, op, f)

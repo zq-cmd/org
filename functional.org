@@ -1,0 +1,95 @@
+#+options: ^:nil
+* function
+  #+begin_src cpp
+    #include <iostream>
+    #include <functional>
+
+    using namespace std;
+
+    void func(function<int(int)> f) {
+      cout << f(1) << endl;
+    }
+
+    int main() {
+      int i = 0;
+      function<int(int)> f = [&i] (int a) -> int {return i+=a;};
+      func(f);
+    }
+  #+end_src
+
+  #+RESULTS:
+  : 1
+
+* mem_fn
+  #+begin_src cpp
+    #include <iostream>
+    #include <functional>
+
+    using namespace std;
+
+    struct A {
+      int data;
+      A(int data) :data(data) {}
+      void f() {cout << data;}
+    };
+
+    int main() {
+      auto f = mem_fn(&A::f);
+      f(A(2));
+    }
+  #+end_src
+
+  #+RESULTS:
+  : 2
+
+* invoke
+  #+begin_src cpp
+    #include <iostream>
+    #include <functional>
+
+    using namespace std;
+
+    int main() {
+      invoke([] (int i) {cout << i;}, 1);
+    }
+  #+end_src
+* bind
+  #+begin_src cpp
+    #include <iostream>
+    #include <functional>
+
+    using namespace std;
+
+    int main() {
+      auto add = [] (int a, int b) {cout << a << b;};
+      auto f = bind(add, 1, placeholders::_1);
+      f(2);
+    }
+  #+end_src
+
+  #+RESULTS:
+  : 12
+
+* functor
+  | plus          | +  |
+  | minus         | -  |
+  | multiplies    | *  |
+  | divides       | /  |
+  | mudulus       | %  |
+  | negate        | -  |
+  |---------------+----|
+  | equal_to      | == |
+  | not_equal_to  | != |
+  | greater       | >  |
+  | less          | <  |
+  | greater_equal | >= |
+  | less_equal    | <= |
+  |---------------+----|
+  | logical_and   | && |
+  | logical_or    | II |
+  | logical_not   | !  |
+  |---------------+----|
+  | bit_and       | &  |
+  | bit_or        | I  |
+  | bot_xor       | ^  |
+  | bit_not       | ~  |

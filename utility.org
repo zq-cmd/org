@@ -1,0 +1,195 @@
+* pair
+  - 广泛用于 stl 中.
+    #+begin_src cpp
+      // #include <utility>
+
+      namespace std {
+        template <class T1, class T2>
+        struct pair {
+          typedef T1 first_type;
+          typedef T2 second_type;
+          T1 first;
+          T2 second;
+          pair() :first(T1()), second(T2()) {}
+          pair(const T1 &a, const T2 &b) :first(a), second(b) {}
+          // 补充默认构造函数, 兼容可转换的数据类型.
+          template<class U, class V>
+          pair(const pair<U, V> &p) :first(p.first), second(p.second) {}
+        };
+        // 无需写出类型即可生成 pair.
+        template <class T1, class T2>
+        pair<T1, T2> make_pair(const T1 &a, const T2 &b);
+      };
+    #+end_src
+  - 比较
+    - ==: 两个元素均相等.
+    - </>: 第一个元素优先级更高, 第一个元素相等时比较第二个元素.
+* ptr
+** auto ptr
+   c++98 标准, 已废弃.
+** unique ptr
+   - 代替了旧的 auto ptr, 在析构函数中释放指向的资源.
+     #+begin_src cpp :results drawer
+       #include <memory>
+       #include <iostream>
+
+       using namespace std;
+
+       struct A {
+         ~A() {
+           cout << "A deleted" << endl;
+         }
+       };
+
+       unique_ptr<A> func() {
+         return unique_ptr<A> (new A);
+       }
+
+       int main() {
+         [] () {func();} ();
+         cout << "after call func" << endl;
+       }
+     #+end_src
+
+     #+RESULTS:
+     :results:
+     A deleted
+     after call func
+     :end:
+
+** shared ptr
+   - 限定的资源可以被多个指针共享, 在访问计数清零后释放指向的资源.
+     #+begin_src cpp
+       #include <memory>
+       #include <iostream>
+
+       using namespace std;
+
+       int main() {
+         shared_ptr<int> sp(new int());
+         cout << sp.use_count() << endl;
+         shared_ptr<int> nsp = sp;
+         cout << sp.use_count() << endl;
+         nsp.reset();
+         cout << sp.use_count() << endl;
+         sp.reset();
+         cout << sp.use_count() << endl;
+       }
+     #+end_src
+
+     #+RESULTS:
+     | 1 |
+     | 2 |
+     | 1 |
+     | 0 |
+
+** weak ptr
+   - 解决 shared ptr 死锁问题.
+   - 不增加 use count, 可以和 shared ptr 相互转化.
+   - 在使用时临时变成 shared ptr 访问资源, use count +1, 访问后变回 weak ptr, use count -1.
+     #+begin_src cpp
+       #include <memory>
+       #include <iostream>
+
+       using namespace std;
+
+       int main() {
+         shared_ptr<int> sp(new int());
+         weak_ptr<int> wp = sp;
+         cout << sp.use_count() << endl << wp.use_count() << endl;
+         // 必须先 lock 转化为 shared ptr 再访问
+         cout << *wp.lock() << endl;
+       }
+     #+end_src
+
+     #+RESULTS:
+     | 1 |
+     | 1 |
+     | 0 |
+* typeid
+  #+begin_src cpp
+    #include <typeinfo>
+    #include <iostream>
+
+    using namespace std;
+
+    int main() {
+      int a;
+      cout << typeid(a).name() << endl;
+    }
+  #+end_src
+
+  #+RESULTS:
+  : i
+
+* limits
+  #+begin_src cpp
+    #include <limits>
+    #include <iostream>
+
+    using namespace std;
+
+    int main() {
+      cout << numeric_limits<double>::max();
+    }
+  #+end_src
+
+  #+RESULTS:
+  : 1.79769e+308
+* max/min
+  #+begin_src cpp
+    #include <iostream>
+    #include <algorithm>
+
+    using namespace std;
+
+    int main() {
+      cout << min(1, 2) << endl;
+      cout << min(1, 2, [] (int a, int b) -> bool {return a > b;}) << endl;
+    }
+  #+end_src
+
+#+RESULTS:
+| 1 |
+| 2 |
+* swap
+  - 可以为复杂类提供特殊版本 swap, 所有 container 和 string 都提供特殊版本 swap.
+  #+begin_src cpp
+    #include <iostream>
+    #include <algorithm>
+
+    using namespace std;
+
+    int main() {
+      auto a = "world", b = "hello";
+      swap(a, b);
+      cout << a << " " << b << endl;
+    }
+  #+end_src
+
+  #+RESULTS:
+  : hello world
+* move
+  - move 在 copy 的语境里强制 move.
+  #+begin_src cpp
+    #include <iostream>
+
+    using namespace std;
+
+    struct A {
+      A(){};
+      A (A&) {cout << "copy" << endl;};
+      A (A&& a) {cout << "move" << endl;};
+    };
+
+    int main() {
+      A a;
+      A b(a);
+      A c(move(a));
+    }
+  #+end_src
+
+  #+RESULTS:
+  | copy |
+  | move |
+

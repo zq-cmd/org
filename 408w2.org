@@ -1,0 +1,234 @@
+* 选择
+  1. c
+  2. b
+  3. a
+  4. a
+  5. b
+  6. b
+  7. c
+  8. d 1, 4
+  9. c
+  10. c
+      - kmp
+  11. b
+  12. b
+  13. b
+      - imull? 排除
+  14. b
+      - 浮点数左规: 左移至对齐
+      - 浮点数溢出: 右规后判断是否溢出 (上溢)
+  15. c
+      - 高位多体存储器: 高位: 地址高位片选存储器
+  16. d
+      - 存取时间: 开始到读写
+      - 存取周期: 两次读写间隔, 存取时间 + 恢复时间
+  17. a
+  18. c
+  19. a
+  20. d
+  21. b
+      - c
+      - 不开中断: 非屏蔽中断可响应
+  22. b
+      - d
+      - 通道:
+        1. cpu: 编制程序, 启动通道
+        2. 通道 cpu: 处理 io, 完毕后中断通知 cpu
+  23. d
+  24. b
+  25. b
+      - 响应比: 1 + 等待时间/要求时间
+  26. a
+  27. b
+  28. a
+  29. a
+  30. c
+  31. d
+      - a??? 随机存储器顺序存取效率低于顺序存储器?
+  32. b
+      - 设备独立性: 用户程序独立于设备
+  33. a
+  34. b
+  35. a
+  36. c
+  37. d
+  38. b
+  39. d
+  40. a
+* 大题
+** 41
+   #+begin_src cpp
+     #include <iostream>
+     #include <vector>
+     #include <algorithm>
+
+     using namespace std;
+
+     int func(vector<int> v) {
+       int s = v.size();
+       vector<pair<int, int>> d(s);
+       d[s-1].second = 0;
+       d[0].first = v[0];
+       for (int i = 1; i < s; ++i)
+         d[i].first = (d[i-1].first > 0 ? d[i-1].first + v[i] : v[i]);
+       for (int i = s - 2; i >= 0; --i)
+         d[i].second = (d[i+1].second + v[i+1] > 0 ? d[i+1].second + v[i+1] : 0);
+       for_each(d.begin(), d.end(), [](pair<int, int> x){cout << x.first << " " << x.second << endl;});
+       vector<int> r;
+       transform(d.begin(), d.end(), back_inserter(r), [](pair<int, int> x) ->int {return x.first + x.second;});
+       return *max_element(r.begin(), r.end());
+     }
+
+     int main() {
+       vector<int> v {1, -2, 3, 10, -4, 7, 2, -5};
+       cout << func(v) << endl;
+       return 0;
+     }
+   #+end_src
+
+    #+RESULTS:
+    |  1 | 16 |
+    | -1 | 18 |
+    |  3 | 15 |
+    | 13 |  5 |
+    |  9 |  9 |
+    | 16 |  2 |
+    | 18 |  0 |
+    | 13 |  0 |
+    | 18 |    |
+** 42
+*** 42.1
+    树
+*** 42.2
+    #+begin_src cpp
+      struct File {
+        File *next;
+      };
+
+      struct Dir {
+        Dir *next;
+        Dir *dir;
+        File *file;
+      };
+
+      Dir C {nullptr, nullptr, nullptr};
+
+      File G {nullptr};
+      File F {G};
+      Dir B {C, nullptr, F};
+
+      File K {nullptr};
+      File J {K};
+      Dir D {nullptr, nullptr, J};
+
+      File E {nullptr};
+      Dir A {B, D, E};
+
+      Dir root {nullptr, A, nullptr};
+    #+end_src
+*** 42.3
+    - 非空二叉树叶子节点的个数 = 度为 2 节点的个数 + 1
+    - 哈夫曼树是没有度为 1 节点的非空二叉树, 设度为 2 节点的个数为 n, 则节点总数为 2*n + 1
+** 43
+*** 43.1
+    - 512B / 2B = 256
+    - 10 + 256 + 256^2 + 256^3
+*** 43.2
+    1. 读取目录 A
+    2. 读取目录 D
+    3. 读取文件 J
+    4. 读取 J 三级文件索引
+    5. 读取 J 二级文件索引
+    6. 读取 J 一级文件索引
+    7. 读取页
+*** 43.3
+    1. 读取目录 C
+    2. 读取目录 I
+    3. 读取目录 P
+    4. 读取目录 U
+    5. 读取文件 W
+    6. 读取页
+*** 43.4
+    - 链接到根目录
+      1. 读取文件 W
+      2. 读取 W 三级文件索引
+      3. 读取 W 二级文件索引
+      4. 读取 W 一级文件索引
+      5. 读取页
+** 44
+   #+begin_src cpp
+     #include <semaphore.h>
+
+     sem_t s1, s2, s1_empty, s2_empty;
+
+     void init() {
+       sem_init(&s1, 0, 0);
+       sem_init(&s2, 0, 0);
+       sem_init(&s1_empty, 0, 1);
+       sem_init(&s2_empty, 0, 1);
+     }
+
+     void destroy() {
+       sem_destroy(&s1);
+       sem_destroy(&s2);
+       sem_destroy(&s1_empty);
+       sem_destroy(&s2_empty);
+     }
+
+     void pa() {
+       sem_wait(&s1_empty);
+       // do
+       sem_post(&s1);
+     }
+
+     void pb() {
+       sem_wait(&s1);
+       sem_wait(&s2_empty);
+       // do
+       sem_post(&s1_empty);
+       sem_post(&s2);
+     }
+
+     void pc() {
+       sem_wait(&s2);
+       // do
+       sem_post(&s2_empty);
+     }
+   #+end_src
+** 45
+*** 45.1
+    - a: mdr
+    - b: ir
+    - c: mar
+    - d: pc
+*** 45.2
+    1. pc->mar
+    2. m(mar)->mdr
+    3. mdr->ir
+*** 45.3
+    1. m(mar)->mdr
+    2. mdr->alu->ac
+    3. ac->mdr
+    4. mdr->m(mar)
+*** 45.4
+    将地址送入 mar 后自增
+** 46
+*** 46.1
+    - 6000 r/m = 100 r/s: 10 ms/r
+    - (1 + 1/9) * 8 * 10 + 1/9 * 10 + 2.5 = 92.5 ms
+*** 46.2
+    - 2.5 / (10/9) ~= 2.2
+    |---+---+---+---+---+---+---+---+---|
+    | a | h | f | d | b | i | g | e | c |
+    |---+---+---+---+---+---+---+---+---|
+    - 4/9 * 8 * 10 + 1/9 * 10 + 2.5 ~= 39.5 ms
+** 47
+*** 47.1
+    - 1: 120 - 90 = 30B
+    - 2: 150 - 120 = 30B
+*** 47.2
+    150
+*** 47.3
+    200 - 150 = 50B
+*** 47.4
+    120

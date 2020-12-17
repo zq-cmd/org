@@ -1,0 +1,14 @@
+#+begin_src cpp
+  #include <random>
+  #include <iostream>
+
+  using namespace std;
+
+  int main() {
+    auto re = default_random_engine();
+    cout << re() << endl;
+  }
+#+end_src
+
+#+RESULTS:
+: 16807

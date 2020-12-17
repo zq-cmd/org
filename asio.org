@@ -1,0 +1,27 @@
+#+begin_src cpp :libs -lpthread
+  #include <iostream>
+  #include <functional>
+  #include <boost/asio.hpp>
+
+  using namespace std;
+  using namespace boost;
+
+  int i = 1;
+  asio::io_context ioc;
+
+  void func(system::error_code ec, int i) {
+    cout << i;
+    if (++i < 10) {
+      asio::deadline_timer timer(ioc, posix_time::seconds(1));
+      timer.async_wait(bind(&func, placeholders::_1, i));
+    }
+  }
+
+  int main() {
+    func(system::error_code(), 1);
+    func(system::error_code(), 2);
+  }
+#+end_src
+
+#+RESULTS:
+: 12

@@ -1,0 +1,19 @@
+* iterator
+  - (make_)[(reverse)(move)]_iterator
+    - [(reverse)(move)]_iterator<T>
+    - make_[(reverse)(move)]_iterator(i)
+    - <[(reverse)(move)]_iterator>.base() => iterator
+  - ([(back)(fornt)]_)[(inersrt_iterator)(inserter)]
+    - [(back)(front)]_insert_iterator<T>(c)
+    - [(back)(front)]_inserter(c)
+    - insert_iterator<T>(c, i)
+    - inserter(c, i)
+  - [io]stream(buf)_iterator
+    - [io]stream(buf)_iterator<T>(s)
+* opeartion
+  - advance
+    - advance(i, n)
+  - distance
+    - distance(beg, end)
+  - next/prev
+    - next/prev(i, n=1)

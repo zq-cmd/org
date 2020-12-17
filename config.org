@@ -1,0 +1,86 @@
+* gitconfig
+
+  #+begin_src conf :babel ~/.gitconfig
+    [user]
+            name = zq-cmd
+            email = zq_cmd@163.com
+    [core]
+            quotepath = false
+    [http]
+            proxy = socks5h://127.0.0.1:1999
+  #+end_src
+
+  quotepath: 解决中文显示问题
+
+* v2ray install
+
+  #+begin_src sh
+    #! /bin/cat
+
+    # website
+    ## https://github.com/v2fly/fhs-install-v2ray
+    ## https://github.com/v2fly/v2ray-examples
+
+    # install v2ray
+    bash <(curl -L https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh)
+
+    # install geoip
+    bash <(curl -L https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-dat-release.sh)
+
+    # remove v2ray
+    bash <(curl -L https://raw.githubusercontent.com/v2fly/fhs-install-v2ray/master/install-release.sh) --remove
+  #+end_src
+
+* v2ray server
+
+  #+begin_src js
+    {
+        "inbounds": [{"port": "!!!port number!!!", "protocol": "vmess", "settings": {"clients": [{"id": "!!!uuid string!!!"}]}}],
+        "outbounds": [{"protocol": "freedom", "settings": {}}]
+    }
+  #+end_src
+
+* v2ray client
+
+  #+begin_src js
+    // china ip
+
+    {
+        "inbounds": [{"port": 1999, "listen": "127.0.0.1", "protocol": "socks", "settings": {"auth": "noauth"}}],
+        "outbounds": [
+            {
+                "protocol": "vmess",
+                "settings": {
+                    "vnext": [{"address": "!!!ip address string!!!", "port": "!!!ip port number!!!", "users": [{ "id": "!!!uuid string!!!"}]}]
+                }
+            },
+            {"protocol": "freedom", "tag": "direct", "settings": {}}
+        ],
+        "routing": {
+            "domainStrategy": "IPOnDemand",
+            "rules": [
+                {"type": "field", "domain": ["geosite:cn"], "outboundTag": "direct"},
+                {"type": "field", "ip": ["geoip:cn", "geoip:private"], "outboundTag": "direct"}
+            ]
+        }
+    }
+
+    // direct
+
+    {
+        "inbounds": [{"port": 1999, "listen": "127.0.0.1", "protocol": "socks", "settings": {"auth": "noauth"}}],
+        "outbounds": [
+            {
+                "protocol": "vmess",
+                "settings": {
+                    "vnext": [{"address": "!!!ip address string!!!", "port": "!!!ip port number!!!", "users": [{"id": "!!!uuid string!!!"}]}]
+                }
+            },
+            {"protocol": "freedom", "tag": "direct", "settings": {}}
+        ],
+        "routing": {
+            "domainStrategy": "IPOnDemand",
+            "rules": [{"type": "field", "ip": ["geoip:private"], "outboundTag": "direct"}]
+        }
+    }
+  #+end_src

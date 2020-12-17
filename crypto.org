@@ -1,0 +1,31 @@
+* 导论
+
+  - 密码学分支
+    1. 对称算法 symmetric
+       - 序列密码 stream_ciphers
+       - 分组密码
+    2. 非对称算法 asymmetric (公钥算法 public_key)
+    3. 密码协议 cryptographic
+       - 主要为应用, 如 tls
+  - 加密通信
+    - 明文 plaintext
+    - 密文 ciphertext
+    - 密钥 key
+  - 整数环
+    - 封闭: 任何两个数的和或积仍在环内
+    - 加法和乘法是可结合的
+    - $\exists 0: \forall a: a + 0 = a, \exists -a: a + -a = 0$
+    - $\exists 1: \forall a: a \cdot 1 = a, \neg \exists a^{-1}: a \cdot a^{-1} = 1$
+    - 仅当 gcd(m,a)=1 时可逆, 若 a 可逆, 则 a 可被除, 即 $\frac{b}{a} = b \cdot a^{-1}$
+  - 整数环加密
+    - 移位加密
+      - encrypt: $c = p + k$
+      - decrypt: $p = c - k$
+    - 仿射加密
+      - encrypt: $c = p \cdot k_1 + k_2$
+      - decrypt: $p = k_1^{-1} \cdot (c - k_2)$
+      - 因 decrypt 时需要 $k_1^{-1}$, 故 $k_1$ 应满足: $gcd(k_1, m) = 1$
+
+* des
+
+  - des: 56 位密钥加密 64 位分组

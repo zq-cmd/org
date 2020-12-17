@@ -1,0 +1,65 @@
+* const cast
+  #+begin_src cpp
+    #include <iostream>
+
+    using namespace std;
+
+    int main() {
+      char c = 'h';
+      cout << static_cast<int>(c);
+    }
+  #+end_src
+
+  #+RESULTS:
+  : 104
+
+* dynamic cast
+  #+begin_src cpp :results drawer
+    #include <iostream>
+
+    using namespace std;
+
+    struct A {virtual void f() {cout << "A" << endl;}};
+    struct B : A {void f() override {cout << "B" << endl;}};
+
+    void func(A& a) {
+      try {
+        dynamic_cast<B&>(a).f();
+      } catch (bad_cast) {
+        cout << "cannot convert to B" << endl;
+      }
+    }
+
+    int main() {
+      A a;
+      B b;
+      func(a);
+      func(b);
+    }
+  #+end_src
+
+  #+RESULTS:
+  :results:
+  cannot convert to B
+  B
+  :end:
+
+* const cast
+  #+begin_src cpp
+    #include <iostream>
+
+    using namespace std;
+
+    int main() {
+      const int i = 1;
+      int *p = const_cast<int *>(&i);
+      ,*p = 2;
+      cout << i << endl;
+    }
+  #+end_src
+
+  #+RESULTS:
+  : 1
+
+* reinterpret cast
+  由编译器定义.

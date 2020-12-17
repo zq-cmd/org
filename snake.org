@@ -1,0 +1,194 @@
+* cmakelists.txt
+  #+begin_src text :tangle CMakeLists.txt
+    cmake_minimum_required(VERSION 2.8)
+    project(sdltest)
+    set(CMAKE_CXX_FLAGS "-std=c++17")
+    aux_source_directory(. DIR_SRC)
+    add_executable(a.out ${DIR_SRC})
+    target_link_libraries(a.out -lSDL2 -lSDL2_image -lSDL2_ttf -lSDL2_mixer -lpthread)
+  #+end_src
+* main.cpp
+  #+begin_src cpp :tangle main.cpp
+    #include <SDL2/SDL.h>
+    #include <list>
+    #include <mutex>
+    #include <random>
+    #include <thread>
+
+    using namespace std;
+
+    default_random_engine re;
+    SDL_Window *window = nullptr;
+    SDL_Renderer *renderer = nullptr;
+
+    const int W = 25;
+    const int H = 20;
+    const int BW = 20;
+    const int BH = 20;
+    const int IX = 5;
+    const int IY = 5;
+    const int IL = 4;
+
+    class Block {
+      int x, y;
+
+    public:
+      Block(int x, int y) : x(x), y(y) {}
+      bool operator==(Block &b) { return x == b.x && y == b.y; }
+      void render() {
+        SDL_Rect rect = {y * BH, x * BW, BW, BH};
+        SDL_RenderFillRect(renderer, &rect);
+      }
+      Block getnext(char dir) {
+        int x = this->x, y = this->y;
+        switch (dir) {
+        case 'h':
+          y--;
+          break;
+        case 'j':
+          x++;
+          break;
+        case 'k':
+          x--;
+          break;
+        default:
+          y++;
+        }
+        if (x < 0 || x >= H || y < 0 || y >= W)
+          throw "crash";
+        return Block(x, y);
+      }
+    };
+
+    class Bean : public Block {
+    public:
+      Bean() : Block(re() % H, re() % W) {}
+      void render() {
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0xFF, 0);
+        Block::render();
+      }
+    };
+
+    class Snake : public list<Block> {
+      char dir;
+
+    public:
+      Snake() : list<Block>{}, dir('k') {
+        for (int i = 0; i < IL; ++i)
+          this->push_back(Block(IX + i, IY));
+      }
+      void change_dir(int sym) {
+        switch (sym) {
+        case SDLK_j:
+          dir = 'j';
+          break;
+        case SDLK_h:
+          dir = 'h';
+          break;
+        case SDLK_l:
+          dir = 'l';
+          break;
+        default:
+          dir = 'k';
+        }
+      }
+      void move(Block *bean) {
+        Block next = this->front().getnext(dir);
+        for (auto i : *this)
+          if (i == next)
+            throw "crash";
+        this->push_front(next);
+        if (next == *bean) {
+          delete bean;
+          bean = new Bean();
+        } else
+          this->pop_back();
+      }
+      void render() {
+        SDL_SetRenderDrawColor(renderer, 0, 0xFF, 0, 0);
+        for (auto i : *this)
+          i.render();
+      }
+    };
+
+    Bean *bean;
+    Snake *snake;
+    bool quit;
+    mutex m;
+
+    void render() {
+      SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+      SDL_RenderClear(renderer);
+      snake->render();
+      bean->render();
+      SDL_RenderPresent(renderer);
+      fflush(stdout);
+    }
+
+    void snake_move() {
+      while (!quit) {
+        this_thread::sleep_for(chrono::duration<double>(0.5));
+        unique_lock<mutex> lck{m};
+        try {
+          snake->move(bean);
+          render();
+        } catch (...) {
+          quit = true;
+        }
+        lck.unlock();
+      }
+    }
+
+    void handle_event() {
+      SDL_Event e;
+      while (!quit) {
+        if (SDL_PollEvent(&e)) {
+          unique_lock<mutex> lck{m};
+          switch (e.type) {
+          case SDL_QUIT:
+            quit = true;
+            break;
+          case SDL_KEYDOWN:
+            snake->change_dir(e.key.keysym.sym);
+          }
+          lck.unlock();
+        }
+      }
+    }
+
+    bool init() {
+      if (SDL_Init(SDL_INIT_VIDEO) < 0)
+        return true;
+      window = SDL_CreateWindow("snake", 0, 0, W * BW, H * BH, SDL_WINDOW_SHOWN);
+      if (!window)
+        return true;
+      renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+      if (!renderer)
+        return true;
+      bean = new Bean();
+      snake = new Snake();
+      quit = false;
+      re = default_random_engine();
+      render();
+      return false;
+    }
+
+    void close() {
+      delete bean;
+      delete snake;
+      SDL_DestroyRenderer(renderer);
+      SDL_DestroyWindow(window);
+      SDL_Quit();
+    }
+
+    int main() {
+      if (init())
+        return -1;
+      thread t1{handle_event};
+      thread t2{snake_move};
+      t1.join();
+      t2.join();
+      close();
+      return 0;
+    }
+  #+end_src

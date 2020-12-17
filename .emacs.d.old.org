@@ -1,0 +1,2518 @@
+#+begin_src elisp
+  ;;; emacs
+  (defmacro +each (its &rest body)
+    `(dolist (it ,its) ,@body))
+
+  (defmacro +setq-hook (hook &rest body)
+    `(add-hook ,hook (lambda () (setq-local ,@body))))
+
+  (defun +kbd (key)
+    (if (stringp key) (kbd key) key))
+
+  (defun +key-binding (key)
+    (key-binding (+kbd key)))
+
+  (defmacro +menu-item (&rest body)
+    `'(menu-item "" nil :filter (lambda (&optional _) ,@body)))
+
+  (defmacro +menu-kbd (&rest body)
+    `(+menu-item (+key-binding ,@body)))
+
+  (defmacro +menu-if (&rest body)
+    `(+menu-item (if ,@body)))
+
+  (defmacro +menu-cond (&rest body)
+    `(+menu-item (cond ,@body)))
+
+  (defmacro +menu-pcase (&rest body)
+    `(+menu-item (pcase ,@body)))
+
+  (defun +key (&rest body)
+    (let (map mode key def)
+      (while body
+        (setq key (car body)
+              def (cadr body)
+              body (cddr body))
+        (pcase key
+          (:map (setq map def))
+          (:mode (setq mode def))
+          (_
+           (setq key (+kbd key))
+           (if mode
+               (pcase map
+                 ((pred keymapp)
+                  (evil-define-key* mode map key def))
+                 ((pred consp)
+                  (+each map (evil-define-key* mode (symbol-value it) key def)))
+                 (_
+                  (evil-define-key* mode 'global key def)))
+             (pcase map
+               ((pred keymapp)
+                (define-key map key def))
+               ((pred consp)
+                (+each map (define-key (symbol-value it) key def)))
+               (_
+                (global-set-key key def)))))))))
+
+  (setq custom-file "~/.emacs.d/custom.el")
+
+  (setq package-archives '(("gnu"   . "http://mirrors.tuna.tsinghua.edu.cn/elpa/gnu/")
+                           ("melpa" . "http://mirrors.tuna.tsinghua.edu.cn/elpa/melpa/")))
+
+  (setq package-selected-packages '(which-key
+                                    evil-snipe
+                                    evil-surround
+                                    smartparens
+                                    helm-chrome
+                                    helm-chrome-history
+                                    wgrep
+                                    helpful
+                                    elisp-demos
+                                    company
+                                    flycheck
+                                    pyim
+                                    posframe
+                                    auctex
+                                    cdlatex
+                                    htmlize
+                                    magit
+                                    dired-subtree
+                                    dired-filter))
+
+  (require 'package)
+
+  (unless (package-installed-p 'which-key)
+    (package-refresh-contents)
+    (+each package-selected-packages
+           (package-install it)))
+
+  (add-to-list 'load-path "~/.emacs.d/lisp")
+  (add-to-list 'load-path "~/.emacs.d/third")
+
+  (tooltip-mode -1)
+  (menu-bar-mode -1)
+  (tool-bar-mode -1)
+  (scroll-bar-mode -1)
+  (blink-cursor-mode -1)
+  (global-eldoc-mode -1)
+
+  (setq visible-bell t)
+
+  (setq inhibit-splash-screen t
+        initial-scratch-message nil)
+
+  (setq-default indent-tabs-mode nil)
+
+  (setq-default display-line-numbers-width 4)
+
+  (add-hook 'prog-mode-hook 'display-line-numbers-mode)
+
+  (setq modus-vivendi-theme-faint-syntax t
+        modus-vivendi-theme-no-mixed-fonts t
+        modus-vivendi-theme-bold-constructs t
+        modus-vivendi-theme-slanted-constructs t
+        modus-vivendi-theme-completions 'moderate
+        modus-vivendi-theme-org-blocks 'greyscale
+        modus-vivendi-theme-diffs 'fg-only)
+  (load-theme 'modus-vivendi)
+
+  (setq default-input-method "pyim")
+
+  (defvar +text-scale-list
+    [(9.0  . 9.0)
+     (10.0 . 10.5)
+     (11.5 . 12.0)
+     (12.5 . 13.5)
+     (14.0 . 15.0)
+     (15.0 . 15.0)
+     (16.0 . 16.5)
+     (18.0 . 18.0)])
+
+  (defvar +text-scale-index 3)
+
+  (defun +text-scale-set (&optional frame)
+    (let ((scale (aref +text-scale-list +text-scale-index)))
+      (set-face-attribute
+       'default frame
+       :font (font-spec :anme "Ubuntu Mono" :size (car scale)))
+      (set-fontset-font
+       (frame-parameter frame 'font)
+       'han
+       (font-spec :name "WenQuanYi Micro Hei Mono" :size (cdr scale)))))
+
+  (+text-scale-set)
+
+  (defun +text-scale-increase ()
+    (interactive)
+    (when (< +text-scale-index 7)
+      (setq +text-scale-index (1+ +text-scale-index))
+      (+text-scale-set)))
+
+  (defun +text-scale-decrease ()
+    (interactive)
+    (when (> +text-scale-index 0)
+      (setq +text-scale-index (1- +text-scale-index))
+      (+text-scale-set)))
+
+  (setq which-key-lighter nil
+        which-key-idle-secondary-delay 0
+        which-key-add-column-padding 2
+        which-key-show-prefix 'mode-line
+        which-key-sort-order 'which-key-description-order)
+
+  (setq which-key-C-h-map
+        (let ((map (make-sparse-keymap)))
+          (+key :map map
+                "q" 'which-key-abort
+                "u" 'which-key-undo-key
+                "d" 'which-key-toggle-docstrings
+                "h" 'which-key-show-standard-help
+                "j" 'which-key-show-next-page-cycle
+                "k" 'which-key-show-previous-page-cycle)
+          (dotimes (it 10)
+            (+key :map map (format "%d" it) 'which-key-digit-argument))
+          map))
+
+  (which-key-mode 1)
+
+  (defalias 'yes-or-no-p 'y-or-n-p)
+  (setq confirm-kill-emacs 'y-or-n-p)
+
+  (setq magit-auto-revert-mode nil
+        vc-handled-backends nil
+        vc-make-backup-files t
+        backup-directory-alist '((".*" . "~/.bak"))
+        tramp-completion-use-auth-sources nil)
+
+  (remove-hook 'find-file-hook 'vc-refresh-state)
+
+  (defun +auto-save-function ()
+    (if (and (not buffer-read-only)
+             buffer-file-name
+             (buffer-modified-p (current-buffer))
+             (file-writable-p buffer-file-name)
+             (not (file-remote-p buffer-file-name))
+             (not (string-match-p epa-file-name-regexp buffer-file-name)))
+        (let ((beg (line-beginning-position))
+              (end (line-end-position)))
+          (save-excursion
+            (if (> (point-max) end)
+                (delete-trailing-whitespace (1+ end) (point-max)))
+            (if (< (point-min) beg)
+                (delete-trailing-whitespace (point-min) (1- beg))))
+          (save-buffer))))
+
+  (run-with-idle-timer 10 t '+auto-save-function)
+
+  (winner-mode 1)
+
+  (defun +wc-init (&optional frame)
+    (set-frame-parameter frame '+wc-slot 0))
+
+  (add-hook 'after-make-frame-functions '+wc-init)
+
+  (set-frame-parameter nil '+wc-slot 1)
+
+  (setq +wc (make-vector 9 nil))
+
+  (defun +wc-select (arg)
+    (interactive "P")
+    (let ((next-wc (- (event-basic-type last-command-event) ?0))
+          (current-wc (frame-parameter nil '+wc-slot)))
+      (unless (zerop current-wc)
+        (aset +wc (1- current-wc) (current-window-configuration)))
+      (unless (or arg (zerop next-wc))
+        (let ((awc (aref +wc (1- next-wc))))
+          (if (window-configuration-p awc)
+              (set-window-configuration awc))))
+      (set-frame-parameter nil '+wc-slot next-wc)))
+
+  (setq-default mode-line-format
+                '("%e" mode-line-front-space
+                  mode-line-mule-info mode-line-client mode-line-modified mode-line-remote
+                  mode-line-frame-identification mode-line-buffer-identification
+                  "   " mode-line-position "   "
+                  mode-line-modes mode-line-misc-info mode-line-end-spaces
+                  (:eval (format "[%d]" (frame-parameter nil '+wc-slot)))))
+
+  (setq enable-recursive-minibuffers t
+        dabbrev-case-replace nil
+        dabbrev-case-distinction nil
+        dabbrev-ignored-buffer-regexps '("\\`[ *]")
+        recentf-max-saved-items 100
+        kill-ring-max 10
+        history-length 10
+        savehist-autosave-interval nil
+        savehist-save-minibuffer-history nil
+        savehist-additional-variables
+        '(read-expression-history
+          extended-command-history
+          +project-try-vc-cache
+          register-alist
+          kill-ring))
+
+  (recentf-mode 1)
+  (savehist-mode 1)
+
+  (defvar-local +project-current nil)
+
+  (defvar +project-try-vc-cache nil)
+
+  (defun +project-try-vc-around (func dir)
+    (unless (eq +project-current 'no-project)
+      (or +project-current
+          (let ((cur +project-try-vc-cache) res)
+            (while (and (not res) cur)
+              (let ((carcur (car cur)))
+                (if (file-in-directory-p dir carcur)
+                    (setq res carcur)
+                  (setq cur (cdr cur)))))
+            (unless res
+              (setq res (cdr-safe (let ((vc-handled-backends '(Git)))
+                                    (funcall func dir))))
+              (if res (add-to-list '+project-try-vc-cache res)))
+            (if res (setq +project-current (cons 'vc res))
+              (setq +project-current 'no-project)
+              nil)))))
+
+  (advice-add 'project-try-vc :around '+project-try-vc-around)
+
+  ;;; evil
+  (setq evil-buffer-regexps nil
+        evil-emacs-state-modes nil
+        evil-motion-state-modes nil
+        evil-insert-state-modes '(shell-mode)
+        evil-want-fine-undo t
+        evil-want-minibuffer t
+        evil-want-Y-yank-to-eol t
+        evil-want-change-word-to-end nil
+        evil-want-keybinding nil
+        evil-want-integration nil
+        evil-overriding-maps nil
+        evil-symbol-word-search t
+        evil-search-wrap nil
+        evil-search-module 'evil-search
+        evil-undo-system 'undo-redo
+        evil-goto-definition-functions
+        '(evil-goto-definition-imenu
+          evil-goto-definition-xref
+          evil-goto-definition-search)
+        evil-fold-list nil
+        evil-visual-newline-commands nil
+        evil-motions
+        '(end-of-defun
+          beginning-of-defun
+          +sp-forward-sexp
+          sp-backward-sexp
+          sp-up-sexp
+          sp-backward-up-sexp
+          outline-next-heading
+          outline-previous-heading
+          org-backward-element
+          org-forward-element
+          org-up-element
+          org-down-element
+          comint-next-prompt
+          comint-previous-prompt
+          Man-next-section
+          Man-previous-section
+          dired-next-line
+          dired-previous-line
+          dired-next-marked-file
+          dired-prev-marked-file
+          dired-subtree-up
+          dired-subtree-down
+          dired-subtree-next-sibling
+          dired-subtree-previous-sibling))
+
+  (provide 'evil-maps)
+  (defun evil-update-insert-state-bindings (&rest args))
+  (require 'evil-surround)
+  (require 'evil-snipe)
+  (require 'company)
+
+  (setq company-lighter-base "Company"
+        company-idle-delay 0.1
+        company-dabbrev-downcase nil
+        company-dabbrev-ignore-case nil
+        company-dabbrev-other-buffers nil
+        company-begin-commands '(self-insert-command)
+        company-continue-commands
+        '(+evil-jk
+          +elec-space
+          +elec-space-toggle
+          +elec-space-change
+          delete-backward-char
+          backward-delete-char
+          backward-delete-char-untabify
+          evil-delete-backward-word)
+        company-frontends
+        '(company-pseudo-tooltip-unless-just-one-frontend
+          company-preview-if-just-one-frontend)
+        company-backends '((company-dabbrev company-keywords)))
+
+  (setq evil-snipe-scope 'buffer
+        evil-snipe-repeat-keys nil
+        evil-snipe-smart-case t
+        evil-snipe-tab-increment t)
+
+  (setq-default evil-snipe-aliases
+                '((?b "[b()]") (?B "[B{}]") (?a "[a<>]") (?r "[]r[]") (?u "[u\\_]")))
+
+  (setq-default evil-surround-pairs-alist
+                (append evil-surround-pairs-alist
+                        '((?a "<" . ">") (?r "[" . "]") (?u "_" . "_"))))
+
+  (+each '(digit-argument
+           negative-argument
+           universal-argument
+           universal-argument-more)
+         (evil-set-command-property it :keep-visual t)
+         (evil-declare-not-repeat it))
+
+  (mapc 'evil-declare-abort-repeat
+        '(undo
+          undefined
+          balance-windows
+          delete-window
+          delete-other-windows
+          split-window
+          split-window-horizontally
+          split-window-vertically
+          winner-undo
+          winner-redo
+          +wc-select
+          +wc-select-to
+          eval-expression
+          execute-extended-command
+          exit-minibuffer
+          find-file-at-point
+          org-cycle
+          org-shifttab
+          outline-show-all
+          outline-hide-body
+          outline-toggle-children))
+
+  (mapc 'evil-declare-change-repeat
+        '(+evil-jk
+          +pyim-jk
+          +elec-space
+          +elec-space-toggle
+          quoted-insert
+          dabbrev-expand
+          completion-at-point
+          company-complete-common
+          company-complete-selection))
+
+  (mapc 'evil-declare-ignore-repeat
+        '(company-abort
+          company-select-next-or-abort
+          company-select-previous-or-abort))
+
+  (evil-set-command-property 'keyboard-quit :suppress-operator t)
+
+  (defadvice keyboard-quit (before evil activate)
+    (evil-repeat-abort))
+
+  (defun +evil-jk ()
+    (interactive)
+    (let ((event (read-event nil nil 0.2)))
+      (if (eq ?k event)
+          (push ?\e unread-command-events)
+        (setq this-command 'self-insert-command)
+        (let ((last-command-event ?j))
+          (call-interactively 'self-insert-command))
+        (if event (push event unread-command-events)))))
+
+  (defvar-local +elec-space-char ?_)
+  (defvar-local +elec-space-flag nil)
+
+  (defun +elec-space ()
+    (interactive)
+    (insert (if +elec-space-flag +elec-space-char ?\s))
+    (setq this-command 'self-insert-command))
+
+  (defun +elec-space-toggle ()
+    (interactive)
+    (setq +elec-space-flag (not +elec-space-flag))
+    (+elec-space))
+
+  (+setq-hook 'evil-insert-state-exit-hook +elec-space-flag nil)
+
+  (setq company-active-map
+        (let ((map (make-sparse-keymap)))
+          (+key :map map
+                "C-g" 'company-abort
+                "M-j" 'company-select-next-or-abort
+                "M-k" 'company-select-previous-or-abort
+                "RET" 'company-complete-selection
+                [tab] 'company-complete-common)
+          map))
+
+  (add-hook 'prog-mode-hook 'company-mode)
+
+  (add-hook 'evil-insert-state-exit-hook 'company-abort)
+
+  (+key :mode 'motion
+        "i"   'evil-insert
+        "a"   'evil-append
+        "I"   'evil-insert-line
+        "A"   'evil-append-line
+        "o"   'evil-open-below
+        "O"   'evil-open-above
+        "g i" 'evil-insert-resume
+        :mode 'insert
+        "M-p" 'yank
+        "M-P" 'helm-show-kill-ring
+        "M-v" 'quoted-insert
+        "M-/" 'dabbrev-expand
+        "M-i" 'completion-at-point
+        "M-o" 'evil-execute-in-normal-state
+        "M-r" 'evil-paste-from-register
+        "M-y" 'evil-copy-from-above
+        "M-e" 'evil-copy-from-below
+        "M-t" 'evil-shift-right-line
+        "M-d" 'evil-shift-left-line
+        "M-w" 'evil-delete-backward-word
+        "M-u" 'evil-delete-back-to-indentation
+        "SPC" '+elec-space
+        "S-SPC" '+elec-space-toggle
+        [S-return] 'comment-indent-new-line
+        :mode 'replace
+        "DEL" 'evil-replace-backspace
+        :mode '(insert replace)
+        "j" '+evil-jk
+        [escape] 'evil-normal-state)
+
+  (defun +toggle-input-method ()
+    (interactive)
+    (command-execute "\\\M-a"))
+
+  (+key "M-h" (+menu-kbd "DEL")
+        "M-g" (+menu-kbd "C-g")
+        "M-q" (+menu-kbd "C-x C-q")
+        "M-c" 'abort-recursive-edit
+        "M-m" 'recenter-top-bottom
+        "M-a" 'toggle-input-method
+        "M-z" 'evil-exit-emacs-state
+        :mode 'motion
+        "M-a" '+toggle-input-method
+        "M-z" 'evil-emacs-state
+        "-"   '+text-scale-decrease
+        "="   '+text-scale-increase
+        "\\"  'evil-execute-in-emacs-state
+        "Z Q" 'evil-quit
+        "Z Z" 'evil-save-modified-and-close
+        "DEL" 'evil-backward-char
+        "RET" 'evil-ret
+        [escape] 'evil-force-normal-state)
+
+  (+key :map evil-window-map
+        "u" 'winner-undo
+        "r" 'winner-redo
+        "w" 'evil-window-next
+        "c" 'evil-window-delete
+        "j" 'evil-window-down
+        "k" 'evil-window-up
+        "h" 'evil-window-left
+        "l" 'evil-window-right
+        "J" 'evil-window-move-very-bottom
+        "K" 'evil-window-move-very-top
+        "H" 'evil-window-move-far-left
+        "L" 'evil-window-move-far-right
+        "s" 'evil-window-split
+        "v" 'evil-window-vsplit
+        "o" 'delete-other-windows)
+
+  (+key :mode 'motion
+        "g w"   evil-window-map
+        "g r"   'revert-buffer
+        "g R"   'revert-buffer
+        "q"     'quit-window
+        "Q"     'evil-indent
+        "<"     'evil-shift-left
+        ">"     'evil-shift-right
+        "M-d"   'evil-scroll-page-down
+        "M-u"   'evil-scroll-page-up
+        "M-f"   'scroll-other-window
+        "M-b"   'scroll-other-window-down
+        [up]    'evil-scroll-line-up
+        [down]  'evil-scroll-line-down
+        [left]  'evil-scroll-column-left
+        [right] 'evil-scroll-column-right)
+
+  (+key :mode 'motion
+        "g U" 'evil-rot13
+        "g u" 'evil-invert-char
+        "v"   'evil-visual-char
+        "V"   'evil-visual-line
+        "M-v" 'evil-visual-block
+        "g v" 'evil-visual-restore
+        :mode 'visual
+        "." 'undefined
+        "o" 'exchange-point-and-mark
+        "v" 'evil-exit-visual-state
+        "I" 'evil-insert
+        "A" 'evil-append
+        "u" 'evil-downcase
+        "U" 'evil-upcase
+        [escape] 'evil-exit-visual-state
+        :mode 'operator
+        "o" 'evil-inner-symbol
+        "O" 'evil-a-symbol
+        "v" 'evil-visual-restore)
+
+  (+each (list [mouse-1] [mouse-2] [mouse-3] [down-mouse-1] [drag-mouse-1])
+         (+key it 'ignore))
+
+  (dotimes (it 10) (+key :mode '(motion insert) (format "M-%d" it) '+wc-select))
+
+  (dotimes (it 10) (+key :mode 'motion (format "%d" it) 'digit-argument))
+
+  (defvar +evil-leader-map (make-sparse-keymap))
+
+  (+key :map +evil-leader-map "u" 'universal-argument
+        :map universal-argument-map "u" 'universal-argument-more)
+
+  (+key :mode 'motion "SPC" +evil-leader-map)
+
+  (defun +evil-get-register-around (func register &optional _noerror)
+    (funcall func
+             (pcase register
+               (?\M-w ?\C-w)
+               (?\M-a ?\C-a)
+               (?\M-o ?\C-o)
+               (?\M-f ?\C-f)
+               (_ register))
+             _noerror))
+
+  (advice-add 'evil-get-register :around '+evil-get-register-around)
+
+  (evil-define-command +evil-edit-register ()
+    :keep-visual t
+    :repeat ignore
+    (let* ((content (evil-get-register evil-this-register))
+           (text (if (vectorp content)
+                     (format "%c%s" ?\e (evil-vector-to-string content))
+                   content))
+           (str (read-string (format "Register %c: " evil-this-register) text))
+           (new-content (if (eq (string-to-char str) ?\e)
+                            (let ((vec (string-to-vector (substring str 1 (length str)))))
+                              (dotimes (it (length vec))
+                                (if (eq (aref vec it) ?\e)
+                                    (aset vec it 'escape)))
+                              vec)
+                          str)))
+      (evil-set-register evil-this-register new-content)))
+
+  (defvar +evil-use-register-transient-map
+    (let ((map (make-sparse-keymap)))
+      (+key :map map "," '+evil-edit-register)
+      map))
+
+  (defun +evil-use-register-after (register)
+    (let (message-log-max)
+      (message (format "Use Register: %c" register)))
+    (set-transient-map +evil-use-register-transient-map))
+
+  (advice-add 'evil-use-register :after '+evil-use-register-after)
+
+  (+key :mode 'motion
+        "\""  'evil-record-macro
+        "'"   'evil-execute-macro
+        ","   'evil-use-register
+        ":"   'eval-expression
+        ";"   'evil-ex
+        "u"   'evil-undo
+        "U"   'evil-redo
+        "."   'evil-repeat
+        "M-." 'evil-repeat-pop
+        "M-," 'evil-repeat-pop-next
+        "g ." 'goto-last-change
+        "g ," 'goto-last-change-reverse)
+
+  (evil-define-operator +evil-operator-narrow (beg end)
+    :move-point nil
+    (interactive "<r>")
+    (narrow-to-region beg end))
+
+  (evil-define-operator +evil-operator-comment (beg end)
+    :move-point nil
+    (interactive "<r>")
+    (comment-or-uncomment-region beg end))
+
+  (+key :mode 'motion
+        "J"   'evil-join
+        "r"   'evil-replace
+        "R"   'evil-replace-state
+        "x"   'evil-delete-char
+        "X"   'evil-delete-backward-char
+        "y"   'evil-yank
+        "Y"   'evil-yank-line
+        "d"   'evil-delete
+        "D"   'evil-delete-line
+        "c"   'evil-change
+        "C"   'evil-change-line
+        "p"   'evil-paste-after
+        "P"   'evil-paste-before
+        "M-p" 'evil-paste-pop
+        "M-P" 'evil-paste-pop-next
+        "g c" '+evil-operator-comment
+        "g n" '+evil-operator-narrow
+        "g N" 'widen
+        :mode 'operator
+        "x" 'evil-surround-edit
+        "X" 'evil-Surround-edit
+        :mode 'visual
+        "x" 'evil-surround-region
+        "X" 'evil-Surround-region)
+
+  (remove-hook 'post-self-insert-hook 'blink-paren-post-self-insert-function)
+
+  (setq sp-show-pair-delay 0.2
+        sp-hybrid-kill-entire-symbol t)
+
+  (smartparens-global-mode 1)
+  (show-smartparens-global-mode 1)
+  (setcdr (assq 'smartparens-mode minor-mode-alist) '(""))
+  (require 'smartparens-config)
+
+  (defface +rd-face-0 '((t :inherit 'font-lock-builtin-face)) "rd 0")
+  (defface +rd-face-1 '((t :inherit 'font-lock-keyword-face)) "rd 1")
+  (defface +rd-face-2 '((t :inherit 'font-lock-function-name-face)) "rd 2")
+
+  (defun +rd-apply-color (loc depth not-match)
+    (font-lock-prepend-text-property loc (1+ loc) 'face
+                                     (if (or not-match (<= depth 0))
+                                         'font-lock-warning-face
+                                       (cdr (assq (mod depth 3)
+                                                  '((0 . font-lock-builtin-face)
+                                                    (1 . font-lock-keyword-face)
+                                                    (2 . font-lock-function-name-face)))))))
+
+  (defun +rd-char-ineligible-p (loc ppss delim-syntax-code)
+    (or
+     (nth 3 ppss)
+     (nth 4 ppss)
+     (nth 5 ppss)
+     (cond
+      ((/= 0 (logand #x10000 delim-syntax-code))
+       (/= 0 (logand #x20000 (or (car (syntax-after (1+ loc))) 0))))
+      ((/= 0 (logand #x20000 delim-syntax-code))
+       (/= 0 (logand #x10000 (or (car (syntax-after (1- loc))) 0))))
+      (t
+       nil))))
+
+  (defun +rd-propertize (end)
+    (let ((last-ppss-pos (point))
+          (ppss (syntax-ppss)))
+      (while (> end (progn (skip-syntax-forward "^()" end) (point)))
+        (let* ((delim-pos (point))
+               (delim-syntax (syntax-after delim-pos)))
+          (setq ppss (parse-partial-sexp last-ppss-pos delim-pos nil nil ppss)
+                last-ppss-pos delim-pos)
+          (forward-char)
+          (let ((delim-syntax-code (car delim-syntax)))
+            (cond
+             ((+rd-char-ineligible-p delim-pos ppss delim-syntax-code)
+              nil)
+             ((= 4 (logand #xFFFF delim-syntax-code))
+              (+rd-apply-color delim-pos (1+ (nth 0 ppss)) nil))
+             (t
+              (let ((not-match-p (/= (cdr delim-syntax) (char-after (nth 1 ppss)))))
+                (+rd-apply-color delim-pos (nth 0 ppss) not-match-p))))))))
+    nil)
+
+  (define-minor-mode +rd-mode
+    "rainbow delimiters mode"
+    nil "" nil
+    (font-lock-remove-keywords nil '(+rd-propertize))
+    (when +rd-mode
+      (font-lock-add-keywords nil '(+rd-propertize) 'append)
+      (setq-local jit-lock-contextually t)
+      (when (bound-and-true-p syntax-begin-function)
+        (syntax-ppss-flush-cache 0))
+      (when (boundp 'syntax-begin-function)
+        (setq-local syntax-begin-function nil)))
+    (when font-lock-mode
+      (font-lock-flush)
+      (with-no-warnings (font-lock-fontify-buffer))))
+
+  (add-hook 'prog-mode-hook '+rd-mode)
+
+  (defun +sp-transpose-sexp ()
+    (interactive)
+    (sp-transpose-sexp -1))
+
+  (evil-define-motion +evil-jump-paren ()
+    :type inclusive
+    (if (and sp-show-pair-overlays
+             (eq (length sp-show-pair-overlays) 3)
+             (eq (current-buffer) (overlay-buffer (car sp-show-pair-overlays))))
+        (let ((beg (overlay-start (car sp-show-pair-overlays)))
+              (end (overlay-start (nth 2 sp-show-pair-overlays))))
+          (if (eq (point) end)
+              (goto-char beg)
+            (goto-char end)))
+      (evil-jump-item)))
+
+  (defun +sp-forward-sexp ()
+    (interactive)
+    (sp-forward-sexp)
+    (if (eolp) (right-char)))
+
+  (+key :mode 'motion
+        "m"   '+evil-jump-paren
+        "M"   'sp-show-enclosing-pair
+        "("   '+sp-transpose-sexp
+        ")"   'sp-transpose-sexp
+        "M-(" 'sp-wrap-round
+        "M-)" 'sp-convolute-sexp
+        "]"   '+sp-forward-sexp
+        "["   'sp-backward-sexp
+        "}"   'sp-up-sexp
+        "{"   'sp-backward-up-sexp
+        "M-[" 'sp-forward-barf-sexp
+        "M-]" 'sp-forward-slurp-sexp
+        "M-{" 'sp-backward-slurp-sexp
+        "M-}" 'sp-backward-barf-sexp
+        "M-r" 'sp-raise-sexp
+        "M-D" 'sp-kill-hybrid-sexp)
+
+  (defun evil-snipe--cleanup ()
+    (remove-overlays nil nil 'category 'evil-snipe)
+    (remove-hook 'pre-command-hook #'evil-snipe--cleanup))
+
+  (+key :mode 'motion
+        ;; move
+        "j"   'evil-next-line
+        "k"   'evil-previous-line
+        "h"   'evil-backward-char
+        "l"   'evil-forward-char
+        "H"   'evil-first-non-blank
+        "L"   'evil-end-of-line
+        "w"   'evil-forward-word-begin
+        "W"   'evil-forward-WORD-begin
+        "e"   'evil-forward-word-end
+        "E"   'evil-forward-WORD-end
+        "b"   'evil-backward-word-begin
+        "B"   'evil-backward-WORD-begin
+        "g e" 'evil-backward-word-end
+        "g E" 'evil-backward-WORD-end
+        "G"   'evil-goto-line
+        "g g" 'evil-goto-first-line
+        "g j" 'evil-next-visual-line
+        "g k" 'evil-previous-visual-line
+        "g H" 'evil-backward-paragraph
+        "g L" 'evil-forward-paragraph
+        "g h" 'beginning-of-defun
+        "g l" 'end-of-defun
+        ;; snipe
+        "f"   'evil-snipe-f
+        "F"   'evil-snipe-F
+        "g f" 'evil-snipe-t
+        "g F" 'evil-snipe-T
+        "s"   'evil-snipe-s
+        "S"   'evil-snipe-S
+        "g s" 'evil-snipe-x
+        "g S" 'evil-snipe-S
+        "t"   'evil-snipe-repeat
+        "T"   'evil-snipe-repeat-reverse
+        ;; jump
+        "M-o" 'evil-jump-backward
+        "M-O" 'evil-jump-forward
+        ;; search
+        "n"   'evil-ex-search-next
+        "N"   'evil-ex-search-previous
+        "/"   'evil-ex-search-forward
+        "?"   'evil-ex-search-backward
+        "g /" 'evil-ex-search-word-forward
+        "g ?" 'evil-ex-search-word-backward
+        "g D" 'find-file-at-point
+        "g d" 'evil-goto-definition
+        "g R" 'xref-find-references
+        "z"   'dired-jump)
+
+  (require 'outline)
+  (require 'hideshow)
+
+  (defun +hs-toggle-hiding ()
+    (interactive)
+    (if (memq (following-char) '(?\( ?{ ?\[))
+        (save-excursion
+          (hs-toggle-hiding))
+     (evil-first-non-blank-of-visual-line)
+     (unless (memq (following-char) '(?\( ?{ ?\[))
+       (goto-char (1- (line-end-position))))
+     (hs-toggle-hiding)
+     (evil-first-non-blank-of-visual-line)))
+
+  (defvar-local +outline-flag nil)
+
+  (+key :map prog-mode-map
+        :mode 'motion
+        "g j" 'outline-next-heading
+        "g k" 'outline-previous-heading
+        "M-j" 'outline-move-subtree-down
+        "M-k" 'outline-move-subtree-up
+        [tab] (+menu-if (outline-on-heading-p)
+                        'outline-toggle-children
+                        '+hs-toggle-hiding)
+        [backtab] (+menu-if (setq +outline-flag (not +outline-flag))
+                            'outline-hide-body
+                            'outline-show-all)
+        "g <tab>" 'hs-show-all
+        "g <backtab>" 'hs-hide-all)
+
+  (+each '(outline-minor-mode hs-minor-mode)
+         (add-hook 'prog-mode-hook it))
+
+  (setcdr (assq 'hs-minor-mode minor-mode-alist) '(" Hs"))
+
+  (defmacro +evil-define-textobj (name key beg end)
+    (let ((iname (intern (concat "+evil-textobj-inner-" name)))
+          (oname (intern (concat "+evil-textobj-outer-" name))))
+      `(progn
+         (evil-define-text-object ,iname (count &optional beg end type)
+           (evil-select-paren ,beg ,end beg end type count nil))
+         (evil-define-text-object ,oname (count &optional beg end type)
+           (evil-select-paren ,beg ,end beg end type count t))
+         (+key :map evil-inner-text-objects-map
+               ,key ',iname
+               :map evil-outer-text-objects-map
+               ,key ',oname))))
+
+  (+evil-define-textobj "underline" "u" "_" "_")
+  (+evil-define-textobj "equal" "=" "=" "=")
+  (+evil-define-textobj "minus" "*" "*" "*")
+  (+evil-define-textobj "plus" "+" "+" "+")
+  (+evil-define-textobj "star" "*" "*" "*")
+  (+evil-define-textobj "slash" "/" "/" "/")
+  (+evil-define-textobj "tilde" "~" "~" "~")
+  (+evil-define-textobj "dollar" "$" "\\$" "\\$")
+
+  (evil-define-text-object +evil-textobj-defun (const &optional beg end type)
+    (cl-destructuring-bind (beg . end)
+        (bounds-of-thing-at-point 'defun)
+      (evil-range beg end 'line)))
+
+  (evil-define-text-object +evil-textobj-entire (count &optional beg end type)
+    (evil-range (point-min) (point-max) 'line))
+
+  (+key :map evil-inner-text-objects-map
+        "t"  'evil-inner-tag
+        "w"  'evil-inner-word
+        "W"  'evil-inner-WORD
+        "o"  'evil-inner-symbol
+        "a"  'evil-inner-angle
+        "r"  'evil-inner-bracket
+        "b"  'evil-inner-paren
+        "B"  'evil-inner-curly
+        "p"  'evil-inner-paragraph
+        "'"  'evil-inner-single-quote
+        "\"" 'evil-inner-double-quote
+        :map evil-outer-text-objects-map
+        "t"  'evil-a-tag
+        "w"  'evil-a-word
+        "W"  'evil-a-WORD
+        "o"  'evil-a-symbol
+        "a"  'evil-an-angle
+        "r"  'evil-a-bracket
+        "b"  'evil-a-paren
+        "B"  'evil-a-curly
+        "p"  'evil-a-paragraph
+        "'"  'evil-a-single-quote
+        "\"" 'evil-a-double-quote
+        :map '(evil-inner-text-objects-map evil-outer-text-objects-map)
+        "f" '+evil-textobj-defun
+        "h" '+evil-textobj-entire)
+
+  (+key :mode '(visual operator)
+        "i" evil-inner-text-objects-map
+        "a" evil-outer-text-objects-map)
+
+  (+key :map minibuffer-local-map
+        "C-g" 'abort-recursive-edit
+        "M-m" 'minibuffer-recenter-top-bottom
+        "M-j" 'next-history-element
+        "M-k" 'previous-history-element
+        :mode 'motion
+        "q"   'abort-recursive-edit
+        "RET" 'exit-minibuffer)
+
+  (set-keymap-parent evil-ex-search-keymap minibuffer-local-map)
+  (set-keymap-parent evil-ex-completion-map minibuffer-local-map)
+
+  (+key :map '(evil-ex-completion-map evil-ex-search-keymap)
+        "DEL" 'evil-ex-delete-backward-char
+        :map evil-ex-completion-map
+        [tab] 'evil-ex-completion)
+
+  (+key :map evil-read-key-map "C-g" 'keyboard-quit)
+
+  (add-hook 'minibuffer-setup-hook 'evil-normalize-keymaps)
+
+  (+each '(("em"  . evil-show-marks)
+           ("er"  . evil-show-registers)
+           ("ej"  . evil-show-jumps)
+           ("!"   . evil-shell-command)
+           ("g"   . evil-ex-global)
+           ("v"   . evil-ex-global-inverted)
+           ("s"   . evil-ex-substitute)
+           ("ss"  . evil-ex-repeat-substitute)
+           ("n"   . evil-ex-normal)
+           ("d"   . evil-ex-delete)
+           ("y"   . evil-ex-yank)
+           ("m"   . evil-move)
+           ("t"   . evil-copy)
+           ("c"   . +evil-operator-comment)
+           ("q"   . evil-quit)
+           ("qa"  . evil-quit-all)
+           ("x"   . evil-save-modified-and-close)
+           ("xa"  . evil-save-and-quit)
+           ("w"   . evil-write)
+           ("wa"  . evil-write-all)
+           ("e"   . evil-edit)
+           ("bd"  . evil-delete-buffer)
+           ("bn"  . evil-next-buffer)
+           ("bp"  . evil-prev-buffer)
+           ("bno" . evil-split-next-buffer)
+           ("bpo" . evil-split-prev-buffer)
+           ("cc"  . evil-goto-error)
+           ("cn"  . next-error)
+           ("cp"  . previous-error)
+           ("mk"  . evil-make)
+           ("man" . +evil-man)
+           ("oc"  . +evil-occur)
+           ("hl"  . evil-ex-nohighlight)
+           ("nu"  . display-line-numbers-mode)
+           ("tl"  . toggle-truncate-lines)
+           ("fo"  . follow-mode)
+           ("ws"  . whitespace-mode)
+           ("wc"  . whitespace-cleanup))
+         (evil-ex-define-cmd (car it) (cdr it)))
+
+  (evil-define-command +evil-man (&optional pattern)
+    (interactive "<a>")
+    (if pattern
+        (man pattern)
+      (call-interactively 'man)))
+
+  (evil-define-command +evil-occur (&optional pattern)
+    (interactive "<a>")
+    (occur (or pattern (thing-at-point 'symbol))))
+
+  (setq occur-mode-map
+        (let ((map (make-sparse-keymap)))
+          (+key :map map
+                "C-x C-q" 'occur-edit-mode
+                :mode 'motion
+                "g f" 'next-error-follow-minor-mode
+                "g o" 'occur-mode-display-occurrence
+                "RET" 'occur-mode-goto-occurrence
+                [S-return] 'occur-mode-goto-occurrence-other-window)
+          map))
+
+  (setq occur-edit-mode-map
+        (let ((map (make-sparse-keymap)))
+          (+key :map map "C-x C-q" 'occur-cease-edit)
+          map))
+
+  (setq xref--xref-buffer-mode-map
+    (let ((map (make-sparse-keymap)))
+      (+key :map map
+            :mode 'motion
+            "j"   'xref-next-line
+            "k"   'xref-prev-line
+            "g r" 'xref-revert-buffer
+            "g o" 'xref-show-location-at-point
+            "RET" 'xref-quit-and-goto-xref
+            [S-return] 'xref-goto-xref)
+      map))
+
+  (setq compilation-minor-mode-map
+        (let ((map (make-sparse-keymap)))
+          (+key :map map
+                :mode 'motion
+                [tab] 'compilation-next-error
+                [backtab] 'compilation-previous-error
+                "g r" 'recompile
+                "g j" 'compilation-next-file
+                "g k" 'compilation-previous-file
+                "g f" 'next-error-follow-minor-mode
+                "g o" 'compilation-display-error
+                "RET" 'compile-goto-error)
+          map))
+
+  (setq compilation-mode-map
+        (let ((map (make-sparse-keymap)))
+          (set-keymap-parent map compilation-minor-mode-map)
+          map))
+
+  (setq grep-mode-map
+        (let ((map (make-sparse-keymap)))
+          (set-keymap-parent map compilation-minor-mode-map)
+          map))
+
+  (setq epa-key-list-mode-map
+        (let ((map (make-sparse-keymap)))
+          (+key :map map
+                :mode 'motion
+                "q"   'epa-exit-buffer
+                "o"   'epa-mark-key
+                "u"   'epa-unmark-key
+                "d"   'epa-delete-keys
+                "i"   'epa-import-keys
+                "e"   'epa-export-keys
+                "RET" 'epa-show-key
+                [tab] 'forward-button
+                [backtab] 'backward-button)
+          map))
+
+  (defvar epa-key-mode-map
+    (let ((map (make-sparse-keymap)))
+      (+key :map map :mode 'motion "q" 'epa-exit-buffer)
+      map))
+
+  (+key :map image-map "=" 'image-increase-size)
+
+  (evil-mode 1)
+
+  ;;; helm
+  (provide 'helm-global-bindings)
+
+  (+key :map +evil-leader-map
+        "h" help-map
+        "v" 'magit-status
+        "V" 'magit-file-dispatch
+        "r" 'helm-resume
+        ";" 'helm-M-x
+        "f" 'helm-find-files
+        "p" '+helm-find
+        "g" '+helm-grep
+        "j" 'helm-mini
+        "o" 'helm-occur
+        "i" 'helm-imenu
+        "m" '+helm-evil-marker
+        "d" 'helm-etags-select
+        "y" 'helm-show-kill-ring
+        "t" 'helm-top
+        "e" '+helm-shell
+        "s" '+helm-web)
+
+  (+key :map help-map
+        "k" 'helpful-key
+        "f" 'helpful-callable
+        "v" 'helpful-variable
+        "o" 'helpful-symbol
+        "t" 'helm-timers
+        "a" 'helm-apropos
+        "l" 'helm-locate-library
+        "p" 'helm-list-emacs-process
+        "d" 'load-library
+        "r" '+describe-features)
+
+  (+key :mode 'motion "K" 'helm-apropos)
+
+  (setq helm-mode-line-string ""
+        helm-comp-read-mode-line ""
+        helm-read-file-name-mode-line-string ""
+        helm-completion-style 'helm
+        helm-completion-styles-alist nil
+        helm-inherit-input-method nil
+        helm-yank-text-at-point-function 'forward-symbol
+        helm-sources-using-default-as-input
+        '(helm-source-occur helm-source-imenu helm-source-etags-select)
+        helm-completing-read-handlers-alist
+        '((dired-do-copy . helm-read-file-name-handler-1)
+          (dired-do-rename . helm-read-file-name-handler-1)
+          (dired-do-symlink . helm-read-file-name-handler-1)
+          (dired-do-compress-to . helm-read-file-name-handler-1)
+          (dired-create-directory . helm-read-file-name-handler-1)))
+
+  (setq helm-map
+        (let ((map (make-sparse-keymap)))
+          (set-keymap-parent map minibuffer-local-map)
+          (+key :map map
+                [remap helm-resume] 'helm-resume-list-buffers-after-quit
+                "M-s" 'helm-toggle-suspend-update
+                "M-j" 'helm-next-line
+                "M-k" 'helm-previous-line
+                "M-J" 'helm-follow-action-forward
+                "M-K" 'helm-follow-action-backward
+                "M-m" 'helm-recenter-top-bottom-other-window
+                :mode '(insert motion)
+                "M-i" 'helm-execute-persistent-action
+                "C-g" 'helm-keyboard-quit
+                "RET" 'helm-maybe-exit-minibuffer
+                [S-return] '+helm-select-1-action
+                [tab] 'helm-select-action
+                :mode 'insert
+                "M-y" 'helm-yank-text-at-point
+                "M-e" 'helm-yank-selection
+                :mode 'motion
+                "j"   'helm-next-line
+                "k"   'helm-previous-line
+                "G"   'helm-end-of-buffer
+                "g g" 'helm-beginning-of-buffer
+                "g j" 'helm-next-source
+                "g k" 'helm-previous-source
+                "M-d" 'helm-next-page
+                "M-u" 'helm-previous-page
+                "M-f" 'helm-scroll-other-window
+                "M-b" 'helm-scroll-other-window-down
+                "o"   '+helm-mark
+                "O"   'helm-toggle-all-marks
+                "U"   'helm-unmark-all
+                "DEL" '+helm-unmark-backward
+                "g y" 'helm-kill-selection-and-quit
+                "g r" 'helm-refresh
+                "g f" 'helm-follow-mode
+                "g W" 'helm-toggle-resplit-window
+                [f11] 'helm-toggle-full-frame
+                "g d" (defun +helm-g-d-place-holder () (interactive))
+                "g o" (defun +helm-g-o-place-holder () (interactive))
+                "g c" (defun +helm-g-c-place-holder () (interactive))
+                "g m" (defun +helm-g-m-place-holder () (interactive))
+                "g b" (defun +helm-g-b-place-holder () (interactive)))
+          map))
+
+  (defun +helm-mark ()
+    (interactive)
+    (with-helm-alive-p
+      (with-helm-window
+        (if (assq 'nomark (helm-get-current-source))
+            (message "Marking not allowed in this source")
+          (helm-aif (not (helm-this-visible-mark))
+              (helm-make-visible-mark))
+          (let ((helm-move-to-line-cycle-in-source t))
+            (helm-next-line 1))))))
+
+  (defun +helm-unmark-backward ()
+    (interactive)
+    (with-helm-alive-p
+      (with-helm-window
+        (if (assq 'nomark (helm-get-current-source))
+            (message "Marking not allowd in this source")
+          (let ((helm-move-to-line-cycle-in-source t))
+            (helm-previous-line 1))
+          (helm-aif (helm-this-visible-mark)
+              (helm-delete-visible-mark it))))))
+
+  (defun +helm-select-1-action ()
+    (interactive)
+    (helm-select-nth-action 1))
+
+  (+key :map minibuffer-local-map "M-l" 'helm-minibuffer-history)
+
+  (setq helm-minibuffer-history-map
+        (let ((map (make-sparse-keymap)))
+          (set-keymap-parent map helm-map)
+          (+key :map map [remap helm-minibuffer-history] 'abort-recursive-edit)
+          map))
+
+  (setq helm-comp-read-map
+        (let ((map (make-sparse-keymap)))
+          (set-keymap-parent map helm-map)
+          (+key :map map [remap +helm-select-1-action] 'helm-cr-empty-string)
+          map))
+
+  (setq helm-read-file-map
+        (let ((map (make-sparse-keymap)))
+          (set-keymap-parent map helm-comp-read-map)
+          (+key :map map
+                "DEL" 'helm-ff-delete-char-backward
+                [remap evil-undo] 'helm-ff-undo
+                [remap evil-shift-left-line] 'helm-find-files-up-one-level
+                [remap evil-shift-right-line] 'helm-find-files-down-last-level
+                [remap helm-mini] 'helm-ff-file-name-history
+                [remap +helm-g-b-place-holder] 'helm-ff-toggle-basename)
+          map))
+
+  (setq helm-file-name-history-map
+        (let ((map (make-sparse-keymap)))
+          (set-keymap-parent map helm-map)
+          (+key :map map
+                [remap helm-minibuffer-history] 'abort-recursive-edit
+                [remap +helm-g-d-place-holder] 'helm-file-name-history-show-or-hide-deleted)
+          map))
+
+  (setq helm-kill-ring-map
+        (let ((map (make-sparse-keymap)))
+          (set-keymap-parent map helm-map)
+          map))
+
+  (setq helm-ff-lynx-style-map nil
+        helm-ff-DEL-up-one-level-maybe t
+        helm-ff-file-name-history-use-recentf t
+        helm-ff-preferred-shell-mode 'shell-mode
+        helm-find-files-bookmark-prefix "ff: ")
+
+  (setq helm-ff-keep-cached-candidates nil)
+
+  (with-eval-after-load 'helm-files
+    ;; dont refresh cache by idle timer but manually
+    (defun helm-ff-cache-mode-add-hooks ())
+    (defun helm-ff-cache-mode-remove-hooks ())
+    (setq helm-ff-keep-cached-candidates 'all)
+    (helm-ff-cache-mode 1))
+
+  (defun +helm-ff-run-open-dired ()
+    (interactive)
+    (with-helm-alive-p
+      (helm-exit-and-execute-action 'helm-open-dired)))
+
+  (defun +helm-ff-run-find-file-in-dired ()
+    (interactive)
+    (with-helm-alive-p
+      (helm-exit-and-execute-action 'helm-point-file-in-dired)))
+
+  (setq helm-generic-files-map
+        (let ((map (make-sparse-keymap)))
+          (set-keymap-parent map helm-map)
+          (+key :map map
+                [remap dired-jump] '+helm-ff-run-open-dired
+                [remap +helm-select-1-action] 'helm-ff-run-switch-other-window
+                [remap helm-occur] 'helm-ff-run-grep
+                [remap +helm-g-b-place-holder] 'helm-ff-run-toggle-basename
+                [remap +helm-g-o-place-holder] 'helm-ff-run-marked-files-in-dired)
+          map))
+
+  (setq helm-find-files-map
+        (let ((map (make-sparse-keymap)))
+          (set-keymap-parent map helm-generic-files-map)
+          (+key :map map
+                "DEL" 'helm-ff-delete-char-backward
+                [remap evil-undo] 'helm-ff-undo
+                [remap evil-shift-left-line] 'helm-find-files-up-one-level
+                [remap evil-shift-right-line] 'helm-find-files-down-last-level
+                [remap dired-jump] '+helm-ff-run-find-file-in-dired
+                [remap helm-mini] 'helm-ff-file-name-history
+                [remap helm-find-files] 'helm-find-files-switch-to-bookmark
+                [remap +helm-find] 'helm-ff-run-browse-project
+                [remap +helm-grep] 'helm-ff-run-grep-ag
+                [remap helm-etags-select] 'helm-ff-run-etags
+                [remap +helm-shell] 'helm-ff-run-switch-to-shell
+                [remap +helm-g-m-place-holder] 'helm-ff-bookmark-set)
+          map))
+
+  (setq helm-bookmark-map
+        (let ((map (make-sparse-keymap)))
+          (set-keymap-parent map helm-map)
+          (+key :map map [remap +helm-g-b-place-holder] 'helm-bookmark-toggle-filename)
+          map))
+
+  (setq helm-bookmark-find-files-map
+        (let ((map (make-sparse-keymap)))
+          (set-keymap-parent map helm-bookmark-map)
+          map))
+
+  (setq helm-fd-switches '("-t" "f"))
+
+  (setq helm-fd-map
+        (let ((map (make-sparse-keymap)))
+          (set-keymap-parent map helm-generic-files-map)
+          (+key :map map
+                "DEL" 'helm-delete-backward-no-update
+                [remap helm-next-source] 'helm-fd-next-directory
+                [remap helm-previous-source] 'helm-fd-previous-directory)
+          map))
+
+  (with-eval-after-load 'helm-files
+    (defun helm-browse-project (&optional arg)
+      (interactive)
+      (require 'helm-fd)
+      (let ((helm-input-idle-delay helm-grep-input-idle-delay))
+        (helm-fd-1 default-directory))))
+
+  (defun +helm-find (arg)
+    (interactive "P")
+    (let ((helm-fd-switches
+           (if arg
+               (split-string (read-string "find args: "))
+             helm-fd-switches))
+          (default-directory
+            (if arg
+                (read-directory-name "find directory: ")
+              (or (cdr-safe (project-current))
+                  default-directory))))
+      (helm-browse-project)))
+
+  (defvar +helm-grep-base-command "rg --color=always --no-heading -n")
+
+  (setq helm-grep-use-ioccur-style-keys nil
+        helm-grep-input-idle-delay 0.15
+        helm-grep-ag-command
+        (format "%s -S -F %%s %%s %%s" +helm-grep-base-command))
+
+  (setq helm-grep-map
+        (let ((map (make-sparse-keymap)))
+          (set-keymap-parent map helm-map)
+          (+key :map map
+                "DEL" 'helm-delete-backward-no-update
+                [remap helm-next-source] 'helm-goto-next-file
+                [remap helm-previous-source] 'helm-goto-precedent-file
+                [remap +helm-g-o-place-holder] 'helm-grep-run-save-buffer)
+          map))
+
+  (defun +helm-grep (arg)
+    (interactive "P")
+    (let ((helm-sources-using-default-as-input
+           (if arg
+               helm-sources-using-default-as-input
+             '(helm-source-grep-ag)))
+          (helm-grep-ag-command
+           (if arg
+               (format "%s %s %%s %%s %%s"
+                       +helm-grep-base-command
+                       (read-string "grep extra command: " "-S -F "))
+             helm-grep-ag-command))
+          (default-directory
+            (if arg
+                (read-directory-name "grep directory: ")
+              (or (cdr-safe (project-current))
+                  default-directory))))
+      (helm-do-grep-ag arg)))
+
+  (setq helm-buffer-max-length 40
+        helm-buffer--pretty-names nil
+        helm-buffer-skip-remote-checking t
+        helm-buffers-favorite-modes '(lisp-interaction-mode org-mode))
+
+  (defun +helm-filter-project (buffers _source)
+    (let ((root (or (cdr-safe (project-current))
+                    default-directory)))
+      (cl-loop for buffer in buffers
+               if (with-current-buffer buffer
+                    (and default-directory
+                         (file-in-directory-p default-directory
+                                              root)))
+               collect buffer)))
+
+  (defun +helm-buffers-toggle-filter-project ()
+    (interactive)
+    (with-helm-alive-p
+      (let ((filter-attrs (helm-attr 'filtered-candidate-transformer
+                                     helm-source-buffers-list)))
+        (helm-attrset 'filtered-candidate-transformer
+                      (if (memq '+helm-filter-project filter-attrs)
+                          (remove '+helm-filter-project filter-attrs)
+                        (cons '+helm-filter-project filter-attrs)))
+        (helm-force-update))))
+
+  (setq helm-buffer-map
+        (let ((map (make-sparse-keymap)))
+          (set-keymap-parent map helm-map)
+          (+key :map map
+                [remap helm-occur] 'helm-buffers-run-occur
+                [remap +helm-g-m-place-holder] 'helm-buffers-mark-similar-buffers
+                [remap +helm-g-d-place-holder] 'helm-buffers-toggle-show-hidden-buffers
+                [remap +helm-g-o-place-holder] '+helm-buffers-toggle-filter-project)
+          map))
+
+  (setq helm-buffer-not-found-map
+        (let ((map (make-sparse-keymap)))
+          (set-keymap-parent map helm-map)
+          map))
+
+  (setq helm-occur-map
+        (let ((map (make-sparse-keymap)))
+          (set-keymap-parent map helm-map)
+          (+key :map map [remap +helm-g-o-place-holder] 'helm-occur-run-save-buffer)
+          map))
+
+  (defun +evil-search-history (pattern)
+    (when pattern
+      (add-to-history 'evil-ex-search-history pattern)
+      (setq evil-ex-search-direction 'forward
+            evil-ex-search-pattern (list pattern t t))
+      (evil-ex-search-activate-highlight evil-ex-search-pattern)))
+
+  (defun +helm-occur-after ()
+    (let ((pattern (car-safe helm-occur-history)))
+      (if (and pattern
+               (= helm-exit-status 0))
+          (+evil-search-history (car (split-string (substring-no-properties pattern)))))))
+
+  (defun +helm-grep-ag-after (arg)
+    (let ((pattern (car-safe helm-grep-ag-history)))
+      (if (and pattern
+               (= helm-exit-status 0))
+          (+evil-search-history (car (split-string (substring-no-properties pattern)))))))
+
+  (advice-add 'helm-occur :after '+helm-occur-after)
+  (advice-add 'helm-do-grep-ag :after '+helm-grep-ag-after)
+
+  (setq helm-grep-mode-map
+        (let ((map (make-sparse-keymap)))
+          (+key :map map
+                "C-x C-q" 'wgrep-change-to-wgrep-mode
+                :mode 'motion
+                "g f" '+helm-grep-follow-mode
+                "g j" 'helm-gm-next-file
+                "g k" 'helm-gm-precedent-file
+                "M-j" 'helm-grep-mode-jump-other-window-forward
+                "M-k" 'helm-grep-mode-jump-other-window-backward
+                "RET" 'helm-grep-mode-jump-other-window)
+          map))
+
+  (setq helm-occur-mode-map
+        (let ((map (make-sparse-keymap)))
+          (+key :map map
+                "C-x C-q" 'wgrep-change-to-wgrep-mode
+                :mode 'motion
+                "g f" '+helm-grep-follow-mode
+                "g j" 'helm-gm-next-file
+                "g k" 'helm-gm-precedent-file
+                "g o" 'helm-occur-mode-resume-session
+                "M-j" 'helm-occur-mode-goto-line-ow-forward
+                "M-k" 'helm-occur-mode-goto-line-ow-backward
+                "RET" 'helm-occur-mode-goto-line-ow)
+          map))
+
+  (defun +helm-grep-ow ()
+    (condition-case nil
+        (save-selected-window
+          (if (eq major-mode 'helm-grep-mode)
+              (helm-grep-mode-jump-other-window)
+            (helm-occur-mode-goto-line-ow))
+          (recenter))
+      (error nil)))
+
+  (defun +helm-grep-follow-next-line ()
+    (interactive)
+    (evil-next-line)
+    (+helm-grep-ow))
+
+  (defun +helm-grep-follow-previous-line ()
+    (interactive)
+    (evil-previous-line)
+    (+helm-grep-ow))
+
+  (defvar +helm-grep-follow-mode-map
+    (let ((map (make-sparse-keymap)))
+      (+key :map map
+            [remap evil-next-line] '+helm-grep-follow-next-line
+            [remap evil-previous-line] '+helm-grep-follow-previous-line)
+      map))
+
+  (define-minor-mode +helm-grep-follow-mode
+    "helm grep follow mode"
+    :lighter " Follow"
+    :keymap +helm-grep-follow-mode-map
+    (if +helm-grep-follow-mode (+helm-grep-ow)))
+
+  (setq wgrep-auto-save-buffer t)
+
+  (autoload 'wgrep-setup-internal "wgrep")
+
+  (setq wgrep-mode-map
+        (let ((map (make-sparse-keymap)))
+          (+key :map map
+                "C-x C-q" 'wgrep-exit
+                [remap evil-quit] 'wgrep-abort-changes
+                [remap evil-save-modified-and-close] 'wgrep-finish-edit
+                :mode 'motion
+                "g d" 'wgrep-mark-deletion
+                "g c" 'wgrep-remove-change
+                "g C" 'wgrep-remove-all-change)
+          map))
+
+  (defun wgrep-helm-header/footer-parser ()
+    (let (beg end)
+      (setq beg (point-min)
+            end (next-single-property-change
+                 (point-min) 'helm-realvalue))
+      (put-text-property beg end 'read-only t)
+      (put-text-property beg end 'wgrep-header t)))
+
+  (defun wgrep-helm-results-parser ()
+    (while (not (eobp))
+      (when (looking-at wgrep-line-file-regexp)
+        (let* ((beg (match-beginning 0))
+               (end (match-end 0))
+               (len (length (match-string 1)))
+               line fname)
+          (if (eq major-mode 'helm-grep-mode)
+              (setq line (string-to-number (nth 1 (helm-grep-split-line (get-text-property (point) 'helm-realvalue))))
+                    fname (get-text-property (point) 'helm-grep-fname))
+            (setq line (get-text-property (point) 'helm-realvalue)
+                  fname (buffer-file-name (get-buffer (get-text-property (point) 'buffer-name)))))
+          (put-text-property beg end 'wgrep-line-number line)
+          (put-text-property beg end 'wgrep-line-filename fname)
+          (put-text-property beg (+ beg len) (wgrep-construct-filename-property fname) fname)))
+      (forward-line 1)))
+
+  (+each '(helm-grep-mode-hook helm-occur-mode-hook)
+         (+setq-hook it
+                     wgrep-results-parser 'wgrep-helm-results-parser
+                     wgrep-header/footer-parser 'wgrep-helm-header/footer-parser)
+         (add-hook it 'wgrep-setup-internal))
+
+  (setq helm-M-x-map
+        (let ((map (make-sparse-keymap)))
+          (set-keymap-parent map helm-map)
+          (+key :map map [remap universal-argument] 'helm-M-x-universal-argument)
+          map))
+
+  (setq helm-imenu-map
+        (let ((map (make-sparse-keymap)))
+          (set-keymap-parent map helm-map)
+          (+key :map map
+                [remap helm-next-source] 'helm-imenu-next-section
+                [remap helm-previous-source] 'helm-imenu-previous-section)
+          map))
+
+  (setq tags-case-fold-search nil)
+
+  (setq helm-etags-map
+        (let ((map (make-sparse-keymap)))
+          (set-keymap-parent map helm-map)
+          (+key :map map
+                [remap helm-next-source] 'helm-goto-next-file
+                [remap helm-previous-source] 'helm-goto-precedent-file)
+          map))
+
+  (setq helm-top-mode-line "")
+
+  (setq helm-top-map
+        (let ((map (make-sparse-keymap)))
+          (set-keymap-parent map helm-map)
+          (+key :map map
+                [remap +helm-g-c-place-holder] 'helm-top-run-sort-by-cpu
+                [remap +helm-g-m-place-holder] 'helm-top-run-sort-by-mem
+                [remap +helm-g-d-place-holder] 'helm-top-run-sort-by-user)
+          map))
+
+  (helm-mode 1)
+  (helm-autoresize-mode 1)
+  (setcdr (assq 'helm-mode minor-mode-alist) '(""))
+  (add-hook 'helm-before-initialize-hook 'evil-set-jump)
+
+  ;;; help
+  (setq helm-describe-function-function 'helpful-callable
+        helm-describe-variable-function 'helpful-variable)
+
+  (setq helpful-max-buffers nil)
+
+  (advice-add 'helpful-update :after 'elisp-demos-advice-helpful-update)
+
+  (defun +describe-features ()
+    (interactive)
+    (describe-variable 'features))
+
+  (setq help-mode-map
+        (let ((map (make-sparse-keymap)))
+          (+key :map map
+                :mode 'motion
+                [tab] 'forward-button
+                [backtab] 'backward-button
+                "<" 'help-go-back
+                ">" 'help-go-forward)
+          map))
+
+  (setq helpful-mode-map
+        (let ((map (make-sparse-keymap)))
+          (+key :map map
+                :mode 'motion
+                [tab] 'forward-button
+                [backtab] 'backward-button
+                "RET" 'helpful-visit-reference
+                "g r" 'helpful-update)
+          map))
+
+  (+key :map Info-mode-map
+        :mode 'motion
+        [tab] 'Info-next-reference
+        [backtab] 'Info-prev-reference
+        "DEL" 'Info-history-back
+        "RET" 'Info-follow-nearest-node)
+
+  ;;; marker
+  (defvar +helm-evil-marker-source
+    (helm-build-sync-source "Evil Marker"
+      :candidates
+      (lambda ()
+        (cl-loop for marker in evil-markers-alist
+                 if (<= ?A (car marker) ?Z)
+                 collect (concat (char-to-string (car marker))
+                                 (propertize (concat "|" (buffer-name (marker-buffer (cdr marker))) "|")
+                                             'face 'helm-moccur-buffer)
+                                 (let ((mark (cdr marker)))
+                                   (save-excursion
+                                     (with-current-buffer (marker-buffer mark)
+                                       (goto-char (marker-position mark))
+                                       (buffer-substring (line-beginning-position)
+                                                         (line-end-position))))))))
+      :action
+      (lambda (candidate)
+        (evil-goto-mark (string-to-char candidate)))))
+
+  (defvar +helm-evil-marker-dummy-source
+    (helm-build-dummy-source "Create"
+      :action (lambda (candidate)
+                (evil-set-marker (upcase (string-to-char candidate))))))
+
+  (defun +helm-evil-marker ()
+    (interactive)
+    (helm :sources '(+helm-evil-marker-source +helm-evil-marker-dummy-source)
+          :truncate-lines t
+          :buffer "*helm evil marker*"))
+
+  ;;; comint
+  (+key :map comint-mode-map
+        :mode 'insert
+        "M-j" 'comint-next-input
+        "M-k" 'comint-previous-input
+        "M-d" 'comint-delchar-or-maybe-eof
+        "M-c" 'comint-interrupt-subjob
+        "M-q" 'comint-quit-subjob
+        "M-L" 'comint-clear-buffer
+        "M-l" 'helm-comint-input-ring
+        :mode 'motion
+        "J"   'helm-comint-prompts
+        "g j" 'comint-next-prompt
+        "g k" 'comint-previous-prompt)
+
+  (defvar +helm-shell-source nil)
+
+  (defun +helm-shell-build-buffers-source ()
+    (helm-make-source "Shell" 'helm-source-buffers
+      :header-name "Shell"
+      :buffer-list (lambda ()
+                     (cl-loop for buffer in (buffer-list)
+                              if (eq (with-current-buffer buffer
+                                       major-mode)
+                                     'shell-mode)
+                              collect (buffer-name buffer)))))
+
+  (defvar +helm-shell-dummy-source
+    (helm-build-dummy-source "Create"
+      :action (lambda (candidate)
+                (shell (generate-new-buffer-name
+                        (format "*shell %s*" candidate))))))
+
+  (defun +helm-shell ()
+    (interactive)
+    (unless +helm-shell-source
+      (setq +helm-shell-source
+            (+helm-shell-build-buffers-source)))
+    (helm :sources '(+helm-shell-source +helm-shell-dummy-source)
+          :buffer "*helm shell*"))
+
+  ;;; chrome
+  (defun +browse-url (url search)
+    (browse-url (concat url (url-hexify-string search))))
+
+  (defvar +helm-web-dummy-source
+    (helm-build-dummy-source "Search"
+      :action (helm-make-actions
+               "Google" (lambda (candidate) (+browse-url "https://www.google.com/search?q=" candidate))
+               "Bing Dict" (lambda (candidate) (+browse-url "https://cn.bing.com/dict/search?q=" candidate))
+               "Bing" (lambda (candidate) (+browse-url "https://cn.bing.com/search?q=" candidate))
+               "Github" (lambda (candidate) (+browse-url "https://github.com/search?q=" candidate)))))
+
+  (defun +helm-web ()
+    (interactive)
+    (require 'helm-chrome)
+    (require 'helm-chrome-history)
+    (helm :sources '(helm-chrome-source
+                     helm-chrome-history-source
+                     +helm-web-dummy-source)
+          :buffer "*helm web*"))
+
+  ;;; nox
+  (setq nox-python-server "pyls"
+        nox-optimization-p nil)
+
+  (add-to-list 'minor-mode-alist '(nox--managed-mode " Nox"))
+
+  (setq nox-mode-map
+        (let ((map (make-sparse-keymap)))
+          (+key :map map :mode 'motion "K" 'nox-show-doc)
+          map))
+
+  (add-hook 'nox-managed-mode-hook 'evil-normalize-keymaps)
+
+  (with-eval-after-load 'nox
+    (require 'posframe))
+
+  (autoload 'nox "nox" "nox" t)
+
+  ;;; autoload
+  (require '+elisp)
+  (with-eval-after-load 'image-mode (require '+image))
+  (with-eval-after-load 'dired      (require '+dired))
+  (with-eval-after-load 'ediff      (require '+ediff))
+  (with-eval-after-load 'man        (require '+man))
+  (with-eval-after-load 'python     (require '+python))
+  (with-eval-after-load 'cc-mode    (require '+cc))
+  (with-eval-after-load 'org        (require '+org))
+  (with-eval-after-load 'magit      (require '+magit))
+  (with-eval-after-load 'pyim       (require '+pyim))
+
+  ;;; end
+  (provide 'init)
+#+end_src
+
+#+begin_src emacs-lisp
+  (dired-async-mode 1)
+
+  (setq dired-mark-region nil
+        dired-listing-switches "-Alh"
+        dired-filter-prefix nil
+        dired-filter-verbose nil
+        dired-filter-revert 'never)
+
+  (add-hook 'dired-mode-hook 'dired-filter-mode)
+
+  (+key :map dired-mode-map
+        :mode 'motion
+        "u"   'dired-undo
+        "j"   'dired-next-line
+        "k"   'dired-previous-line
+        "J"   'dired-goto-file
+        "g d" 'dired-do-kill-lines
+        [tab] 'dired-subtree-toggle
+        [backtab] 'dired-subtree-cycle
+        "g h" 'dired-subtree-up
+        "g l" 'dired-subtree-down
+        "g j" 'dired-subtree-next-sibling
+        "g k" 'dired-subtree-previous-sibling
+        "g H" 'dired-next-marked-file
+        "g L" 'dired-prev-marked-file
+        "g n" 'dired-subtree-narrow
+        "g R" 'dired-subtree-revert
+        "_"   'dired-sort-toggle-or-edit
+        "+"   'dired-create-directory
+        "c"   'dired-do-copy
+        "C"   'dired-do-byte-compile
+        "r"   'dired-do-rename
+        "R"   'dired-do-load
+        "d"   'dired-do-delete
+        "D"   'epa-dired-do-decrypt
+        "e"   '+dired-do-ediff
+        "E"   'epa-dired-do-encrypt
+        "s"   'dired-do-shell-command
+        "S"   'epa-dired-do-sign
+        "a"   'dired-do-async-shell-command
+        "A"   'epa-dired-do-verify
+        "x"   'dired-do-compress
+        "X"   'dired-do-compress-to
+        "i"   'dired-do-symlink
+        "I"   'dired-do-hardlink
+        "w"   'dired-do-chown
+        "W"   'dired-do-chgrp
+        "t"   '+dired-do-xdg-open
+        "T"   'dired-do-touch
+        "M"   'dired-do-chmod
+        "F"   'dired-filter-mode
+        "p"   'dired-filter-pop
+        "P"   'dired-filter-pop-all
+        "|"   'dired-filter-or
+        "!"   'dired-filter-negate
+        "\\"  'dired-filter-decompose
+        "f r" 'dired-filter-by-regexp
+        "f e" 'dired-filter-by-extension
+        "f d" 'dired-filter-by-directory
+        "f f" 'dired-filter-by-file
+        "f o" 'dired-filter-by-omit
+        "f h" 'dired-filter-by-dot-files
+        "f g" 'dired-filter-by-git-ignored
+        "m r" 'dired-filter-mark-by-regexp
+        "m e" 'dired-filter-mark-by-extension
+        "m d" 'dired-filter-mark-by-directory
+        "m f" 'dired-filter-mark-by-file
+        "m o" 'dired-filter-mark-by-omit
+        "m h" 'dired-filter-mark-by-dot-files
+        "m g" 'dired-filter-mark-by-git-ignored
+        "o"   'dired-mark
+        "O"   'dired-toggle-marks
+        "U"   'dired-unmark-all-marks
+        "DEL" 'dired-unmark-backward
+        "g o" 'dired-display-file
+        "RET" 'dired-find-file
+        [S-return] 'dired-find-file-other-window
+        :mode 'visual
+        "g n" '+evil-operator-narrow)
+
+  (defun +dired-do-xdg-open ()
+    (interactive)
+    (+each (dired-get-marked-files)
+           (call-process-shell-command
+            (concat "xdg-open "
+                    (shell-quote-argument it)))))
+
+  (defun +dired-do-ediff ()
+    (interactive)
+    (let ((files (dired-get-marked-files)))
+      (pcase (length files)
+        (1 (ediff-backup (car files)))
+        (2 (ediff-files (car files) (nth 1 files)))
+        (3 (ediff-files3 (car files) (nth 1 files) (nth 2 files))))))
+
+  (setq wdired-mode-map
+        (let ((map (make-sparse-keymap)))
+          (+key :map map
+                [remap evil-quit] 'wdired-abort-changes
+                [remap evil-save-modified-and-close] 'wdired-finish-edit)
+          map))
+
+  (provide '+dired)
+#+end_src
+
+#+begin_src emacs-lisp
+  (setq ediff-window-setup-function 'ediff-setup-windows-plain
+        ediff-split-window-function 'split-window-horizontally)
+
+  (defun +ediff-scroll-vertically (&optional arg)
+    (interactive "P")
+    (let ((last-command-event ?v))
+      (ediff-scroll-vertically arg)))
+
+  (defun +ediff-scroll-horizontally (&optional arg)
+    (interactive "P")
+    (let ((last-command-event ?<))
+      (ediff-scroll-horizontally arg)))
+
+  (defun ediff-setup-keymap ()
+    (setq ediff-mode-map (make-sparse-keymap))
+    (suppress-keymap ediff-mode-map)
+    (+key :map ediff-mode-map
+          :mode 'motion
+          "q"   'ediff-quit
+          "g r" 'ediff-update-diffs
+          "g W" 'ediff-toggle-split
+          "j"   'ediff-next-difference
+          "k"   'ediff-previous-difference
+          "l"   '+ediff-scroll-horizontally
+          "h"   'ediff-scroll-horizontally
+          "M-d" '+ediff-scroll-vertically
+          "M-u" 'ediff-scroll-vertically
+          "M-m" 'ediff-recenter
+          "M-s" 'ediff-suspend)
+    (cond
+     (ediff-merge-job
+      (+key :map ediff-mode-map
+            :mode 'motion
+            "a"   'ediff-copy-A-to-C
+            "b"   'ediff-copy-B-to-C
+            "r"   'ediff-restore-diff-in-merge-buffer
+            "R"   'ediff-re-merge
+            "g s" 'ediff-toggle-skip-changed-regions))
+     (ediff-3way-comparison-job
+      (+key :map ediff-mode-map
+            :mode 'motion
+            "a b" 'ediff-copy-A-to-B
+            "a c" 'ediff-copy-A-to-C
+            "b a" 'ediff-copy-B-to-A
+            "b c" 'ediff-copy-B-to-C
+            "c a" 'ediff-copy-C-to-A
+            "c b" 'ediff-copy-C-to-B
+            "r a" 'ediff-restore-diff
+            "r b" 'ediff-restore-diff
+            "r c" 'ediff-restore-diff
+            "w a" 'ediff-save-buffer
+            "w b" 'ediff-save-buffer
+            "w c" 'ediff-save-buffer))
+     (t
+      (+key :map ediff-mode-map
+            :mode 'motion
+            "a"   'ediff-copy-A-to-B
+            "b"   'ediff-copy-B-to-A
+            "r a" 'ediff-restore-diff
+            "r b" 'ediff-restore-diff
+            "w a" 'ediff-save-buffer
+            "w b" 'ediff-save-buffer)))
+    (fset 'ediff-mode-map ediff-mode-map))
+
+  (defun ediff-setup-meta-map ()
+    (setq ediff-meta-buffer-map (make-sparse-keymap))
+    (suppress-keymap ediff-meta-buffer-map)
+    (+key :map ediff-meta-buffer-map
+          :mode 'motion
+          "q"   'ediff-quit-meta-buffer
+          "j"   'ediff-next-meta-item
+          "k"   'ediff-previous-meta-item
+          "RET" ediff-meta-action-function)
+    (use-local-map ediff-meta-buffer-map))
+
+  (evil-ex-define-cmd "di" 'ediff-show-registry)
+
+  (add-hook 'ediff-after-quit-hook-internal 'winner-undo)
+
+  (provide '+ediff)
+#+end_src
+
+#+begin_src emacs-lisp
+  (setq image-auto-resize-on-window-resize nil)
+
+  (setq image-mode-map
+        (let ((map (make-sparse-keymap)))
+          (+key :map map
+                :mode 'motion
+                "-"   'image-decrease-size
+                "="   'image-increase-size
+                "r"   'image-rotate
+                "R"   'image-transform-reset
+                "f"   'image-transform-fit-both
+                "F w" 'image-transform-fit-to-width
+                "F h" 'image-transform-fit-to-height
+                "j"   'image-next-line
+                "k"   'image-previous-line
+                "h"   'image-scroll-right
+                "l"   'image-scroll-left
+                "H"   'image-bol
+                "L"   'image-eol
+                "G"   'image-eob
+                "g g" 'image-bob
+                "M-u" 'image-scroll-up
+                "M-d" 'image-scroll-down
+                "M-j" 'image-next-file
+                "M-k" 'image-previous-file)
+          map))
+
+  (provide '+image)
+#+end_src
+
+#+begin_src emacs-lisp
+  (evil-define-operator +eval-lisp (beg end)
+    :move-point nil
+    (interactive "<r>")
+    (eval-region beg end))
+
+  (+setq-hook 'eval-expression-minibuffer-setup-hook +elec-space-char ?-)
+
+  (+setq-hook 'emacs-lisp-mode-hook
+              +elec-space-char ?-
+              outline-regexp ";;; "
+              company-backends '(company-capf company-dabbrev))
+
+  (add-hook 'eval-expression-minibuffer-setup-hook 'smartparens-mode)
+
+  (+key :map read-expression-map
+        "'"   (lambda () (interactive) (insert ?'))
+        :mode 'motion
+        "RET" 'read--expression-try-read)
+
+  (+key :map lisp-interaction-mode-map :mode 'insert "M-j" 'eval-print-last-sexp)
+
+  (+key :map '(emacs-lisp-mode-map lisp-interaction-mode-map) :mode 'motion "g r" '+eval-lisp)
+
+  (provide '+elisp)
+#+end_src
+
+#+begin_src emacs-lisp
+  ;;; var
+  (+setq-hook 'org-mode-hook pyim-english-input-switch-functions '(org-inside-LaTeX-fragment-p))
+
+  (sp-with-modes 'org-mode (sp-local-pair "$" "$" :unless '(sp-point-after-word-p)))
+
+  (defun org--get-display-dpi () 140.0)
+
+  (setq org-modules '(org-tempo)
+        org-export-backends '(html)
+        org-html-postamble nil
+        org-html-validation-link nil)
+
+  (defun +org-xdg-open (path type)
+    (call-process-shell-command
+     (concat "xdg-open " (shell-quote-argument path))))
+
+  (setq org-footnote-auto-adjust t
+        org-file-apps
+        '(("\\.pdf\\'" . +org-xdg-open)
+          ("\\.x?html?\\'" . +org-xdg-open)
+          (auto-mode . emacs))
+        org-open-non-existing-files t
+        org-link-descriptive nil
+        org-link-frame-setup '((file . find-file))
+        org-src-window-setup 'current-window)
+
+  (setq org-special-ctrl-a/e t)
+
+  ;;; calendar
+  (defun +calendar-goto-today (&optional arg) (calendar-goto-today))
+
+  (defmacro evil-org-calendar-define (key command)
+    `(+key :map org-read-date-minibuffer-local-map
+           :mode 'motion
+           ,key (defun ,(intern (concat "evil-org-calendar-" key)) ()
+                  (interactive)
+                  (org-eval-in-calendar '(,command 1)))))
+
+  (+each '(("j" . calendar-forward-week)
+           ("k" . calendar-backward-week)
+           ("h" . calendar-backward-day)
+           ("l" . calendar-forward-day)
+           ("J" . calendar-scroll-left-three-months)
+           ("K" . calendar-scroll-right-three-months)
+           ("H" . calendar-backward-month)
+           ("L" . calendar-forward-month)
+           ("." . +calendar-goto-today))
+         (eval `(evil-org-calendar-define ,(car it) ,(cdr it))))
+
+  ;;; motion
+  (evil-define-text-object evil-org-textobj-emement (count &optional beg end type)
+    (let ((element (org-element-at-point)))
+      (list (org-element-property :begin element)
+            (org-element-property :end element))))
+
+  (evil-define-motion evil-org-beginning-of-line ()
+    :type exclusive
+    (if (org-at-heading-or-item-p)
+        (org-beginning-of-line)
+      (evil-first-non-blank)))
+
+  (evil-define-motion evil-org-end-of-line ()
+    :type inclusive
+    (org-end-of-line))
+
+  (defun evil-org-insert-line ()
+    (interactive)
+    (evil-org-beginning-of-line)
+    (evil-insert-state))
+
+  (defun evil-org-delete-back-to-indentation ()
+    (interactive)
+    (if (bolp)
+        (evil-delete-backward-char-and-join 1)
+      (delete-region (if (<= (current-column) (current-indentation))
+                         (line-beginning-position)
+                       (save-excursion
+                         (evil-org-beginning-of-line)
+                         (point)))
+                     (point))))
+
+  (defun evil-org-open-below ()
+    (interactive)
+    (cond
+     ((org-at-table-p)
+      (org-table-insert-row '(4))
+      (evil-insert-state))
+     ((org-at-item-p)
+      (end-of-visible-line)
+      (org-insert-item (org-at-item-checkbox-p))
+      (evil-insert-state))
+     (t
+      (evil-open-below 0))))
+
+  (defun evil-org-open-above ()
+    (interactive)
+    (cond
+     ((org-at-table-p)
+      (org-table-insert-row)
+      (evil-insert-state))
+     ((org-at-item-p)
+      (beginning-of-line)
+      (org-insert-item (org-at-item-checkbox-p))
+      (evil-insert-state))
+     (t
+      (evil-open-above 0))))
+
+  ;;; shift
+  (defun evil-org-indent-items (beg end count)
+    (setq count (or count 1))
+    (let ((struct (save-excursion (goto-char beg) (org-list-struct)))
+          (region-p (region-active-p)))
+      (if (and struct org-list-automatic-rules (not region-p)
+               (= (point-at-bol) (org-list-get-top-point struct)))
+          (org-list-indent-item-generic count nil struct)
+        (save-excursion
+          (if region-p (deactivate-mark))
+          (set-mark beg)
+          (goto-char end)
+          (org-list-indent-item-generic count t struct)))))
+
+  (evil-define-operator evil-org-> (beg end count)
+    (interactive "<r><vc>")
+    (setq count (or count 1))
+    (cond
+     ((org-with-limited-levels
+       (save-excursion (goto-char beg) (org-at-heading-p)))
+      (if (> count 0)
+          (org-map-region 'org-do-demote beg end)))
+     ((and (org-at-item-p)
+           (<= end (save-excursion (org-end-of-item-list))))
+      (evil-org-indent-items beg end count))))
+
+  (evil-define-operator evil-org-< (beg end count)
+    (interactive "<r><vc>")
+    (evil-org-> beg end (- (or count 1))))
+
+  (evil-define-operator evil-org-delete (beg end type register yank-handler)
+    (interactive "<R><x><y>")
+    (let ((lines-p (or (< beg (line-beginning-position))
+                       (> end (line-end-position)))))
+      (evil-delete beg end type register yank-handler)
+      (if (and lines-p (org-at-item-p)) (org-list-repair))))
+
+  (add-to-list 'evil-surround-operator-alist '(evil-org-delete . delete))
+
+  ;;; insert
+  (defun evil-org-insert ()
+    (interactive)
+    (pcase (read-char-exclusive "Insert: [i]link | [f]ootnote | [t]imestamp | [c]alendar")
+      (?i (insert (format "[[./%s]]"
+                          (file-name-nondirectory
+                           (directory-file-name
+                            (read-file-name "File: "))))))
+      (?f (org-footnote-new))
+      (?t (org-time-stamp '(16)))
+      (?T (org-time-stamp '(16) t))
+      (?c (org-time-stamp nil))
+      (?C (org-time-stamp nil t))))
+
+  (defun evil-org-empty-item-p ()
+    (cond
+     ((org-at-item-p)
+      (string-match-p "^[[:space:]]*\\([+-]\\|[[:digit:]]+[.)]\\)[[:space:]]*\\(::[[:space:]]*\\)?$"
+                      (thing-at-point 'line)))
+     ((org-at-table-p)
+      (cl-every 'string-empty-p
+                (nth (1- (org-table-current-line))
+                     (cl-remove 'hline (org-table-to-lisp)))))))
+
+  ;;; key
+  (setq cdlatex-math-modify-prefix ?\"
+        cdlatex-math-symbol-prefix ?'
+        cdlatex-math-symbol-alist '((?\" ("\\prime"          ))))
+
+  (add-hook 'org-mode-hook 'org-cdlatex-mode)
+
+  (+key :map org-mode-map
+        :mode '(visual operator)
+        "a e" 'evil-org-textobj-emement
+        "i e" 'evil-org-textobj-emement
+        :mode 'insert
+        "M-i" 'evil-org-insert
+        "M-d" 'org-metaleft
+        "M-t" 'org-metaright
+        "M-h" 'org-delete-backward-char
+        "M-u" 'evil-org-delete-back-to-indentation
+        "M-j" 'org-return-indent
+        "RET" (+menu-cond
+               ((evil-org-empty-item-p) 'evil-change-whole-line)
+               ((eolp) 'evil-org-open-below)
+               (t 'org-return-indent))
+        [S-return] (+menu-if (org-at-table-p)
+                             'org-table-copy-down
+                             'org-insert-heading)
+        [M-S-return] (+menu-if (org-at-table-p)
+                               'org-table-hline-and-move
+                               'org-insert-subheading)
+        :mode 'motion
+        "!"   'org-export-dispatch
+        "@"   'org-latex-preview
+        "#"   'org-toggle-inline-images
+        "$"   'org-toggle-link-display
+        "g o t" 'org-babel-tangle
+        "g o T" 'org-babel-tangle-file
+        "g o j" 'org-babel-next-src-block
+        "g o k" 'org-babel-previous-src-block
+        "g o t" 'org-babel-execute-subtree
+        "g o b" 'org-babel-execute-buffer
+        "g o i" 'org-babel-insert-header-arg
+        "g o c" 'org-babel-check-src-block
+        "g o s" 'org-babel-view-src-block-info
+        "g o z" 'org-babel-switch-to-session
+        "g o l" 'org-babel-load-in-session
+        "g o c" 'org-babel-remove-result-one-or-many
+        "H"   'evil-org-beginning-of-line
+        "L"   'evil-org-end-of-line
+        "I"   'evil-org-insert-line
+        "o"   'evil-org-open-below
+        "O"   'evil-org-open-above
+        "d"   'evil-org-delete
+        "<"   'evil-org-<
+        ">"   'evil-org->
+        "g h" 'org-up-element
+        "g l" 'org-down-element
+        "g j" 'org-forward-element
+        "g k" 'org-backward-element
+        "M-h" 'org-metaleft
+        "M-l" 'org-metaright
+        "M-j" 'org-metadown
+        "M-k" 'org-metaup
+        "M-H" 'org-shiftmetaleft
+        "M-L" 'org-shiftmetaright
+        "M-J" 'org-shiftmetadown
+        "M-K" 'org-shiftmetaup
+        "}"   'org-shiftup
+        "{"   'org-shiftdown
+        "["   'org-shiftleft
+        "]"   'org-shiftright
+        "DEL" 'org-mark-ring-goto
+        "g p" 'org-set-property
+        "g C" 'org-toggle-comment
+        "g RET" 'org-ctrl-c-tab
+        "RET" (+menu-if (memq (face-at-point) '(org-link org-footnote))
+                        'org-open-at-point
+                        'org-ctrl-c-ctrl-c)
+        [S-return] 'org-edit-special
+        [tab] 'org-cycle
+        [backtab] 'org-shifttab)
+
+  (+key :map org-src-mode-map
+        [remap evil-quit] 'org-edit-src-abort
+        [remap evil-save-modified-and-close] 'org-edit-src-exit)
+
+  (+key :map org-table-fedit-map
+        [remap evil-quit] 'org-table-fedit-abort
+        [remap evil-save-modified-and-close] 'org-table-fedit-finish)
+
+  (advice-add 'evil-write :around
+              (defun evil-org-write (func &rest args)
+                (if (org-src-edit-buffer-p)
+                    (org-edit-src-save)
+                  (apply func args))))
+
+  (provide '+org)
+#+end_src
+
+#+begin_src emacs-lisp
+  (require 'flycheck)
+
+  (+each '(c-mode-hook c++-mode-hook)
+         (+setq-hook it outline-regexp "//// "))
+
+  (+key :map '(c-mode-map c++-mode-map)
+        :mode 'motion
+        "!" 'flycheck-mode
+        "@" 'flycheck-list-errors)
+
+  (with-eval-after-load 'org (require 'ob-C))
+
+  (provide '+cc)
+#+end_src
+
+#+begin_src emacs-lisp
+  (setq python-indent-guess-indent-offset nil
+        python-shell-interpreter "python3"
+        org-babel-python-command "python3")
+
+  (+setq-hook 'python-mode-hook outline-regexp "## " outline-heading-end-regexp "\n")
+
+  (with-eval-after-load 'org (require 'ob-python))
+
+  (defvar-local +python-shell-checked nil)
+  (defvar-local +python-shell-prev-buffer nil)
+
+  (defun +python-shell-check ()
+    (unless +python-shell-checked
+      (setq-local python-shell-buffer-name
+                  (format "Python %s"
+                          (or (cdr-safe (project-current))
+                              default-directory)))
+      (setq +python-shell-checked (format "*%s*"
+                                          python-shell-buffer-name))))
+
+  (defun +python-switch-to-shell ()
+    (interactive)
+    (+python-shell-check)
+    (if (get-buffer +python-shell-checked)
+        (let ((bn (buffer-name)))
+          (switch-to-buffer-other-window +python-shell-checked)
+          (setq-local +python-shell-prev-buffer bn))
+      (run-python)))
+
+  (defun +python-switch-to-buffer ()
+    (interactive)
+    (if +python-shell-prev-buffer
+        (switch-to-buffer-other-window +python-shell-prev-buffer)))
+
+  (evil-define-operator +eval-python (beg end)
+    :move-point nil
+    (interactive "<r>")
+    (+python-shell-check)
+    (python-shell-send-region beg end)
+    (display-buffer +python-shell-checked))
+
+  (+key :map python-mode-map
+        :mode 'motion
+        "!"   'nox
+        "@"   'nox-rename
+        "g r" '+eval-python
+        "g z" '+python-switch-to-shell)
+
+  (+key :map inferior-python-mode-map :mode 'motion "g z" '+python-switch-to-buffer)
+
+  (provide '+python)
+#+end_src
+
+#+begin_src emacs-lisp
+  (setq Man-width 80)
+
+  (setq Man-mode-map
+        (let ((map (make-sparse-keymap)))
+          (+key :map map
+                :mode 'motion
+                [tab] 'forward-button
+                [backtab] 'backward-button
+                "K"   'man
+                "J"   'Man-goto-section
+                "r"   'Man-follow-manual-reference
+                "g j" 'Man-next-section
+                "g k" 'Man-previous-section
+                "g r" 'Man-update-manpage
+                "M-j" 'Man-next-manpage
+                "M-k" 'Man-previous-manpage)
+          map))
+
+  (provide '+man)
+#+end_src
+
+#+begin_src emacs-lisp
+  (transient-suffix-put 'magit-dispatch "k" :key "x")
+  (transient-remove-suffix 'magit-dispatch "P")
+  (transient-remove-suffix 'magit-dispatch "F")
+  (transient-append-suffix 'magit-dispatch "u" '("p" "Push" magit-push))
+  (transient-append-suffix 'magit-dispatch "U" '("P" "Pull" magit-pull))
+
+  (+key :map magit-section-mode-map
+        :mode 'motion
+        "g j" 'magit-section-forward-sibling
+        "g k" 'magit-section-backward-sibling
+        "g h" 'magit-section-up
+        [tab] 'magit-section-toggle
+        [backtab] 'magit-section-cycle
+        "g <tab>" 'magit-section-cycle-global)
+
+  (+key :map magit-mode-map
+        :mode '(visual motion)
+        "o" 'magit-dispatch
+        :mode 'motion
+        "q"   'magit-mode-bury-buffer
+        "z"   'magit-dired-jump
+        "x"   'magit-delete-thing
+        "s"   'magit-stage
+        "S"   'magit-stage-modified
+        "u"   'magit-unstage
+        "U"   'magit-unstage-all
+        "d"   'magit-diff
+        "D"   'magit-diff-refresh
+        "p"   'magit-push
+        "P"   'magit-pull
+        "c"   'magit-commit
+        "g z" 'magit-jump-to-stashes
+        "g s" 'magit-jump-to-staged
+        "g u" 'magit-jump-to-unstaged
+        "g r" 'magit-refresh
+        "g R" 'magit-refresh-all
+        "RET" 'magit-visit-thing
+        "SPC" +evil-leader-map)
+
+  (+key :map magit-blame-read-only-mode-map
+        :mode 'motion
+        "q"   'magit-blame-quit
+        "g r" 'magit-blame-reverse
+        "g a" 'magit-blame-addition
+        "g d" 'magit-blame-removal
+        "g j" 'magit-blame-next-chunk
+        "g k" 'magit-blame-previous-chunk
+        "g J" 'magit-blame-next-chunk-same-commit
+        "g K" 'magit-blame-previous-chunk-same-commit
+        "M-f" 'magit-diff-show-or-scroll-up
+        "M-b" 'magit-diff-show-or-scroll-down
+        "RET" 'magit-show-commit
+        "SPC" +evil-leader-map)
+
+  (+key :map magit-blob-mode-map
+        :mode 'motion
+        "q"   'magit-kill-this-buffer
+        "g r" 'magit-blame-reverse
+        "g a" 'magit-blame-addition
+        "g d" 'magit-blame-removal
+        "M-j" 'magit-blob-next
+        "M-k" 'magit-blob-previous)
+
+  (evil-make-overriding-map magit-blame-read-only-mode-map 'motion)
+  (evil-make-overriding-map magit-blob-mode-map 'motion)
+
+  (add-hook 'magit-blob-mode-hook 'evil-normalize-keymaps)
+  (add-hook 'magit-blame-mode-hook 'evil-normalize-keymaps)
+
+  (provide '+magit)
+#+end_src
+
+#+begin_src emacs-lisp
+  (setq posframe-mouse-banish nil
+        pyim-page-tooltip 'posframe
+        pyim-default-scheme 'zirjma
+        pyim-autoselector nil
+        pyim-enable-shortcode nil
+        pyim-fuzzy-pinyin-alist nil)
+
+  (defun pyim-punctuation-full-width-p ())
+
+  (defun +pyim-jk ()
+    (interactive)
+    (let ((event (read-event nil nil 0.2)))
+      (if (eq ?k event)
+          (push ?\e unread-command-events)
+        (setq pyim-candidates-last pyim-candidates)
+        (pyim-with-entered-buffer
+          (insert ?j)
+          (if (and event (<= ?a event ?z))
+              (insert event)))
+        (pyim-entered-refresh))))
+
+  (+key :map pyim-mode-map
+        "j"   '+pyim-jk
+        "M-j" 'pyim-page-next-page
+        "M-k" 'pyim-page-previous-page
+        "M-u" 'pyim-quit-clear
+        "M-h" 'pyim-entered-delete-backward-char
+        "M-w" 'pyim-entered-delete-backward-imelem)
+
+  (pyim-scheme-add
+   '(zirjma
+     :document "zirjma"
+     :class shuangpin
+     :first-chars "abcdefghijklmnopqrstuvwxyz"
+     :rest-chars "abcdefghijklmnopqrstuvwxyz"
+     :prefer-trigger-chars nil
+     :keymaps
+     (("a" "a" "a")
+      ("b" "b" "ou")
+      ("c" "c" "iao")
+      ("d" "d" "uang" "iang")
+      ("e" "e" "e")
+      ("f" "f" "en")
+      ("g" "g" "eng")
+      ("h" "h" "ang")
+      ("i" "ch" "i")
+      ("j" "j" "an")
+      ("k" "k" "ao")
+      ("l" "l" "ai")
+      ("m" "m" "ian")
+      ("n" "n" "in")
+      ("o" "o" "uo" "o")
+      ("p" "p" "un")
+      ("q" "q" "iu")
+      ("r" "r" "uan" "er")
+      ("s" "s" "iong" "ong")
+      ("t" "t" "ue" "ve")
+      ("u" "sh" "u")
+      ("v" "zh" "v" "ui")
+      ("w" "w" "ia" "ua")
+      ("x" "x" "ie")
+      ("y" "y" "uai" "ing")
+      ("z" "z" "ei")
+      ("aa" "a")
+      ("ah" "ang")
+      ("aj" "an")
+      ("ak" "ao")
+      ("al" "ai")
+      ("ee" "e")
+      ("ef" "en")
+      ("eg" "eng")
+      ("er" "er")
+      ("ez" "ei")
+      ("ob" "ou")
+      ("oo" "o"))))
+
+  (pyim-basedict-enable)
+
+  (provide '+pyim)
+#+end_src

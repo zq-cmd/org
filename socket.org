@@ -1,0 +1,131 @@
+* socket
+  #+begin_src cpp
+    #include <sys/socket.h>
+    int socket(int domain, int type, int protocol); // 失败返回 -1, 成功返回 fd
+    ssize_t send(int fd, const void *buf, size_t n, int flags);
+    ssize_t recv(int fd, void *buf, size_t n, int flags);
+    int shutdown(int fd, int how); // 0/-1
+    int bind(int fd, const struct sockaddr *addr, socklen_t len); // 0/-1
+    int listen(int fd, int backlog); // 0/-1
+    int accept(int fd, sockaddr *addr, socklen_t *lenp); // w失败返回 -1, 成功返回 fd
+    int connect(int fd, const struct sockaddr *addr, socklen_t len); // 0/-1
+  #+end_src
+  - socket
+    - domain: AF_[(UNIX)(INET(6))]
+    - type: SOCK_[(DGRAM)(RAW)(SEQPACKET)(STREAM)]
+      - raw: ip 数据报
+      - dgram: 长度固定, 无连接, 不可靠
+      - seqpacket: 长度固定, 有序, 有连接, 可靠
+      - stream: 有序, 可靠, 双向连接
+    - protocol: 默认为 0, 使用默认协议, stream 默认 tcp, dgram 默认 udp
+  - send
+    - flags
+      - MSG_DONTROUTE: 禁止路由查询
+      - MSG_DONTWAIT: 非阻塞, 等价于 O_NONBLOCK
+      - MSG_EOR: 若协议支持, 记录结束
+      - MSG_OOB: 若协议支持, 发送带外数据
+    - read(fd, buf, n): send(fd, buf, n, 0)
+  - recv
+    - flags
+      - MSG_OOB: 若协议支持, 接收带外数据
+      - MSG_PEEK: 察看而不取走报文, 再次调用 recv 接收相同数据
+      - MSG_WAITALL: SOCK_STREAM 强制 buf 满时再返回
+  - shutdown
+    - how: SHUT_[(RD)(WR)(RDWR)]
+    - close 所有引用全部关闭后才释放端口
+    - write(fd, buf, n): recv(fd, buf, n, 0)
+  - listen backlog: 请求队列大小
+* info
+  #+begin_src cpp
+    #include <sys/socket.h>
+    int getsockname(int fd, struct sockaddr *addr, socklen_t *lenp); // 0/-1
+    int getpeername(int fd, struct sockaddr *addr, socklen_t *lenp); // 0/-1
+    int getsockopt(int fd, int level, int optname, void *optval, socklen_t *optlen); // 0/-1
+    int setsockopt(int fd, int level, int optname, const void *optval, socklen_t *optlen); // 0/-1
+  #+end_src
+  - level
+    - SOL_SOCKET
+      - SO_LINGER: 若有待发送数据则延迟关闭
+      - SO_BROADCAST: 允许广播
+      - SO_DONTROUTE: 禁止路由查询
+      - SO_ERR (get): 取出错误
+      - SO_OOBINLINE: 带外数据继续在栈中存放
+      - SO_KEEPLIVE
+      - SO_[(SND)(RCV)][(BUF)(LOWAT)(TIMEO)]
+      - SO_REUSE[(ADDR)(PORT)]
+      - SO_TYPE (get)
+      - SO_USELOOPBACK: AF_ROUTE, 接收的发送数据
+    - IPPROTO_IP
+      - IP_OPTIONS
+      - IP_HDRINCL: AF_RAW, 调用者构造头部
+      - IP_TOS
+      - IP_TTL
+      - IP_RECV[(DSTADDR)(IF)]
+      - IP_MULTICAST_[(IF)(TTL)(LOOP)]
+      - IP_[(ADD)(DROP)]_MEMBERSHIP (set)
+    - IPPROTO_TCP
+      - TCP_KEEPALIVE
+      - TCP_MAXRT
+      - TCP_MAXSEG
+      - TCP_NODELAY
+      - TCP_STDURG
+* un
+  #+begin_src cpp
+    #include <sys/un.h>
+    struct sockaddr_un {
+      sa_family_t sun_family;
+      char sun_path[108];
+    };
+    #include <sys/socket.h>
+    int socketpair(int domain, int type, int protocol, int fds[2]); // 0/-1
+  #+end_src
+  - AF_UNIX 跳过网络栈处理, 性能更高
+  - socketpair 一般只用于 AF_UNIX, 生成匿名 un, 类似 pipe
+  - 将 socket bind 到一个 un 地址时, 创建 sock 文件, 若文件存在则 bind 失败, 类似 fifo
+  - len: offsetof(struct sockaddr_un, sun_path) + strlen(sun.sun_path)
+* inet
+  #+begin_src cpp
+    #include <arpa/inet.h>
+    struct sockaddr {
+      sa_family_t sa_family;
+      char sa_data[14];
+    };
+    struct in_addr {
+      in_addr_t s_addr;
+    };
+    struct sockaddr_in {
+      sa_family_t sin_family;
+      in_port_t sin_port;
+      struct in_addr sin_addr;
+    };
+    struct in6_addr {
+      uint8_t s6_addr[16];
+    };
+    struct sockaddr_in6 {
+      sa_family_t sin6_family;
+      in_port_t sin6_port;
+      uint32_t sin6_flowinfo;
+      struct in6_addr sin6_addr;
+      uint32_t sin6_scope_id;
+    };
+    uint32_t htonl(uint32_t host32);
+    uint32_t ntohl(uint32_t net32);
+    uint16_t htons(uint16_t host16);
+    uint16_t ntohs(uint16_t net16);
+    const char *inet_ntop(int domain, const void *addr, char *str, socklen_t size); // 失败返回空指针, 成功返回 str
+    int inet_pton(int domain, const char *str, void *addr); // 失败返回 -1, 格式无效返回 0, 成功返回 1
+    #include <string.h>
+    void *memset(void *buf, int i, size_t n);
+    void *memcpy(void *buf1, void *buf2, size_t n);
+    int memcmp(const void *buf1, const void *buf2, size_t n);
+  #+end_src
+  - tcp/ip 大端, intel 小端
+  - sin_port: uint16_t
+  - sin_addr.sin_addr_t: uint32_t
+  - inet_[np]to[pn]
+    - domain: AF_INET(6)
+    - INET(6)_ADDRSTRLEN: inet(6) addr 地址字符串长度
+    - size: str 大小
+    - addr: &sin.sin_addr
+  - INADDR_ANY: 本地任何 ip 地址
+  - struct sockaddr_in sin; sin.sin_family = AF_INET; sin.sin_port = htons(23); inet_pton(AF_INET, "192.168.0.1", &sin.sin_addr)

@@ -1,0 +1,177 @@
+* 选择
+  1. d
+  2. d
+  3. b
+  4. b
+  5. a
+     - b
+     - avl 树负数右倾
+  6. d
+  7. c
+  8. b
+  9. d
+  10. c I,III,IV
+  11. a
+  12. c
+  13. b
+  14. a
+  15. a
+  16. a
+  17. d
+  18. b
+  19. a
+  20. b
+      - 一段时间内只能启用一个子通道
+  21. b
+  22. b
+  23. c
+  24. d II,V,III,IV
+  25. b
+  26. d
+  27. b
+  28. b
+  29. b
+  30. cbaa
+  31. a
+  32. b
+      - d
+      - 多道程序设计是提高单机资源利用率的关键技术
+      - spooling 系统打印数据先存入输出井, 再送入打印机
+  33. b
+  34. a
+      - 非坚持监听算法增加等待时间减少冲突率, 信道利用率低
+  35. d
+  36. a
+  37. d
+  38. d
+  39. b
+  40. c
+* 大题
+** 41
+*** 41.12
+    #+begin_src cpp
+      #include <stdlib.h>
+
+      void func(int *a, int n) {
+        int *b = (int *)malloc(n * sizeof(int));
+        int *c = (int *)malloc(n * sizeof(int));
+        for (int i = 0; i < n; ++i) {
+          b[i] = a[i];
+          c[i] = 0;
+          for (int j = 0; j < n; ++j)
+            if (a[j] < a[i])
+              ++c[i];
+        }
+        for (int i = 0; i < n; ++i)
+          a[c[i]] = b[i];
+      }
+    #+end_src
+*** 41.3
+    n^2
+*** 41.4
+    否. 简单选择排序比较 n(n-1)/2 次
+** 42
+*** 42.1
+    遍历树, 对每个节点判断其左子树是否均小于它, 右子树是否都大于它
+*** 42.2
+    #+begin_src cpp
+      struct Tree {
+        int data;
+        Tree *lc;
+        Tree *rc;
+      };
+
+      int gt(Tree *t, int data) {
+        if (!t)
+          return 1;
+        if (t->data > data)
+          return gt(t->lc, data) && gt(t->rc, data);
+        return 0;
+      }
+
+      int lt(Tree *t, int data) {
+        if (!t)
+          return 1;
+        if (t->data < data)
+          return lt(t->lc, data) && gt(t->rc, data);
+        return 0;
+      }
+
+      int func(Tree *t) {
+        if (!t)
+          return 1;
+        if (lt(t->lc, t->data) && gt(t->rc, t->data))
+          return func(t->lc) && func(t->rc);
+        return 0;
+      }
+    #+end_src
+*** 42.3
+    - 时间复杂度: O(n^2)
+    - 空间复杂度: O(n)
+** 43
+*** 43.1
+    - 128/4 = 32 组
+    - 组号: log(32) = 5
+    - 块内偏移量: log(64) = 6
+    - tag: 32 - 5 - 6 = 21
+    - 21b tag, 6b index, 5b offset
+*** 43.2
+    128*(64B + 1b + 21b) = 8KB + 352B = 8544B
+** 44
+*** 44.12
+    - 0~12 地址线
+    - 13~15 片选线
+** 45
+*** 45.1
+    5.2K/1K = 6 页
+    | 0 | 21 |
+    | 1 | 27 |
+    | 2 | 28 |
+    | 3 | 29 |
+    | 4 | 34 |
+    | 5 | 35 |
+*** 45.2
+    - 有
+    - 最后一页内存在未使用的内存碎片
+    - 会
+    - 0.8K
+*** 45.3
+    - 64M/4K = 16K
+    - 16Kb = 2KB
+** 46
+*** 46.1
+    - 前:
+      - 512B/64B = 8
+      - 254/8 = 32
+      - 33/2 = 16.5
+    - 后:
+      - 512B/10B = 51
+      - 254/51 = 5
+      - 6/2 + 1 = 4
+*** 46.2
+    - n/2 > m/2 + 1
+    - n-m > 2
+** 47
+   - 原
+     | B | 6 | direct |
+     | D | 3 | direct |
+     | E | 5 | dircct |
+   - D
+     | A | 16 | D      |
+     | B |  6 | direct |
+     | D |  3 | direct |
+     | E |  5 | direct |
+     | F | 13 | D      |
+   - E
+     | A | 12 | E      |
+     | B |  6 | direct |
+     | D |  3 | direct |
+     | E |  5 | direct |
+     | F |  9 | E      |
+   - B
+     | A | 11 | B      |
+     | B |  6 | direct |
+     | D |  3 | direct |
+     | E |  5 | direct |
+     | F |  8 | B      |
+

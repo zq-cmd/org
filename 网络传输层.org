@@ -1,0 +1,24 @@
+* tcp 连接管理
+
+  - 打开
+  - a->b: seq = x, SYN = 1
+  - b->a: seq = y, ACK = 1, ack = x+1, SYN = 1
+  - a->b: seq = x+1, ACK = 1, ack = y+1
+  - 关闭
+  - a->b: seq = x, FIN = 1
+  - b->a: seq = y, ACK = 1, ack = x+1
+  - b->a: 传输数据
+  - b->a: seq = z, ACK = 1, ack = x+1, FIN = 1
+  - a->b: seq = x+1, ACK = 1, ack = z+1
+
+  - SYN 使 seq +1, 数据使 seq +数据长度
+
+* tcp 拥塞控制
+
+  - wnd = min {rwnd (接收窗口), cwnd(拥塞窗口)}
+  - cwnd
+    - 慢开始: 1, 2, 4, 8, 16...
+    - 拥塞控制, 到阈值 x 时: 32, 33, 34, 35...
+    - 拥塞时 (cwnd 为 w): 设置阈值 x 为 w/2
+      - 正常: cwnd 归 0, 慢开始: 1, 2, 4, 8, ..., x, x+1, x+2, ...
+      - 快重传/恢复: 连续发送 3 个冗余 ack, 拥塞控制: x, x+1, x+2, ...

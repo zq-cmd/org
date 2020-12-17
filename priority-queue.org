@@ -1,0 +1,28 @@
+#+begin_src cpp
+  #include <queue>
+  #include <iostream>
+
+  using namespace std;
+
+  struct Pare {bool operator() (int a, int b) {return a > b;}};
+
+  template<typename T>
+  void func(T pq) {
+    for (auto i : {1, 2, 3, 4})
+      pq.push(i);
+    while (!pq.empty()) {
+      cout << pq.top();
+      pq.pop();
+    }
+    cout << endl;
+  }
+
+  int main() {
+    func(priority_queue<int>());
+    func(priority_queue<int, vector<int>, Pare>());
+  }
+#+end_src
+
+#+RESULTS:
+| 4321 |
+| 1234 |

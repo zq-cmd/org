@@ -1,0 +1,199 @@
+* 选择
+  1. c
+     - d
+     - 带尾指针的循环单链表实现队列, 入队添至链表尾, 出队自链表头
+  2. a
+  3. a
+  4. d
+  5. b
+  6. d
+  7. b
+  8. d
+  9. a
+  10. d
+  11. a
+  12. c
+      - 74181ALU?
+  13. a
+  14. b
+  15. a
+  16. d
+      - b
+      - 二地址指令一般不使用栈顶和次栈顶 <<栈顶>>
+  17. c
+  18. b
+  19. b
+  20. c
+      - b
+      - 执行部件: 控制器为控制部件, 其他为执行部件
+  21. b
+  22. b
+      - dma 执行时机: 总线周期
+  23. c
+  24. c
+  25. d
+  26. c
+  27. c
+  28. c
+  29. d
+      - 存取控制矩阵: 多用户存取权限保护
+  30. c
+  31. a
+  32. a
+  33. a
+  34. b
+  35. c
+  36. ac
+  37. c
+  38. c
+  39. b
+  40. c
+* 大题
+** 41
+*** 41.12
+    | 1 | 2 | 3 | 4 | 5 | 6 |
+    |---+---+---+---+---+---|
+    | 0 | 3 | 2 | 6 | 6 | 8 |
+    | 0 | 4 | 2 | 6 | 7 | 8 |
+*** 41.3
+    BEG, 8
+** 42
+*** 42.1
+    以 vi 为起点深度优先遍历, 若遍历到 vj 则算法结束, 存在 vi 到 vj 的路径, 若遍历结束则不存在
+*** 42.2
+    #+begin_src cpp
+      #include <stdlib.h>
+
+      int func(int *ljb, int *visited, int vi, int vj, int n) {
+        if (vi == vj)
+          return 1;
+        if (visited[vi])
+          return 0;
+        visited[vi] = 1;
+        for (int i = 0; i < n; ++i)
+          if (ljb[n * vi + i])
+            if (func(ljb, visited, n * vi + i, vj, n))
+              return 1;
+        return 0;
+      }
+
+      int func2(int *ljb, int vi, int vj, int n) {
+        int *visited = (int *)malloc(n * sizeof(int));
+        for (int i = 0; i < n; ++i)
+          visited[i] = 0;
+        return func(ljb, visited, vi, vj, n);
+      }
+    #+end_src
+*** 42.3
+    O(n^2)
+** 43
+*** 43.1
+    | 0 |   |    |   |    |    |
+    | 1 |   |    |   |    |    |
+    | 2 |   | -- |   |    |    |
+    | 3 |   |    |   | -- |    |
+    | 4 |   |    |   |    |    |
+    | 5 | - |    | - |    | -- |
+*** 43.2
+    | 0 |    |   |    |    |
+    | 1 |    |   |    |    |
+    | 2 |    | - |    | -- |
+    | 3 |    |   | -- |    |
+    | 4 |    |   |    |    |
+    | 5 | -- |   |    |    |
+*** 43.3
+    | 0 |    |   |    |   |    |
+    | 1 |    |   |    |   |    |
+    | 2 |    |   | -- |   |    |
+    | 3 |    |   |    |   | -- |
+    | 4 |    |   |    |   |    |
+    | 5 | -- |   |    |   |    |
+** 44
+*** 44.1
+    - 1MB/s / 4B = 0.25M/s
+    - 0.25M/s * 100 = 25M/s
+    - 25M/s / 100M/s = 0.25
+*** 44.2
+    - 1MB/s / 4B = 0.25M/s
+    - 0.25M/s * 50 = 12.5M/s
+    - 12.5M/s / 100M/s = 0.125
+*** 44.3
+    - 1 MB/s / 4KB = 250/s
+    - 250/s * 1500 = 375K/s
+    - 375K/s / 100M/s = 0.00375
+*** 44.4
+    - 中断方式在数据量小时 cpu 利用率高, 实时性好
+    - dma 方式在数据量大时 cpu 利用率高
+** 45
+   #+begin_src cpp
+     const int N = 10;
+
+     struct semphare {int i;};
+
+     void p(semphare i) {}
+     void v(semphare i) {}
+
+     semphare xz {N};
+     semphare xzcj {N-2};
+     semphare xzcl {N-1};
+     semphare cj {0};
+     semphare cl {0};
+
+     void func1() {
+       p(xzcj);
+       p(xz);
+       v(cj);
+     }
+
+     void func2() {
+       p(xzcl);
+       p(xz);
+       v(xz);
+     }
+
+     void func3() {
+       p(cj);
+       p(cl);
+       p(cl);
+       v(xz);
+       v(xz);
+       v(xz);
+       v(xzcj);
+       v(xzcl);
+       v(xzcl);
+     }
+   #+end_src
+** 46
+*** 46.1
+    - 512B/2B = 256
+    - 10 + 256 + 256^2 + 256^3
+*** 46.2
+    - 1: A
+    - 1: D
+    - 1: J fcb
+    - 3: 3 级索引
+    - 1: 访问页
+    - 1 + 1 + 1 + 3 + 1 = 7
+*** 46.3
+    - 1: C
+    - 1: I
+    - 1: P
+    - 1: U
+    - 1: W fcb 直接索引
+    - 1: 访问页
+    - 1 + 1 + 1 + 1 + 1 + 1 = 6
+*** 46.4
+    - 将 w 硬连接至根目录
+    - 1: W fcb
+    - 3: 3 级索引
+    - 1: 访问页
+    - 1 + 3 + 1 = 5
+** 47
+*** 47.1
+    100 - 70 = 30B
+*** 47.2
+    100
+*** 47.3
+    180 - 100 = 80B
+*** 47.4
+    70

@@ -1,0 +1,91 @@
+* quote
+
+  #+begin_src perl :results output
+    $a = 1;
+
+    print "value of a is $a", "\n";
+    print 'value of a is $a', "\n";
+    print "value of a is \$a", "\n";
+
+    print << "EOF";
+    In here doc: value of a is $a.
+    EOF
+
+    print << 'EOF';
+    In here doc: value of a is $a.
+    EOF
+  #+end_src
+
+  #+RESULTS:
+  : value of a is 1
+  : value of a is $a
+  : value of a is $a
+  : In here doc: value of a is 1.
+  : In here doc: value of a is $a.
+
+* context
+
+** void, scalar, list
+
+   #+begin_src perl :results output
+     my @a = ("hello", "world");
+     my $sc = @a; # scalar context
+     my ($lc) = @a; # list context
+
+     print "sc: $sc\n";
+     print "lc: $lc\n";
+
+     sub v {
+         # return void, scalar, list determined by context
+     };
+
+     v(); # void context
+     scalar v(); # scalar context in scalar
+     process_list_of_results(v()); # list context in process_list_of_results
+
+     my %h1 = (
+         k => v(); # list context in hash
+     );
+
+     my %h2 = (
+         k => scalar v(); # scalar context in scalar
+     );
+   #+end_src
+
+   #+RESULTS:
+   : sc: 2
+   : lc: hello
+
+   - perl determine how much work a function should do by context.
+   - list context in hash.
+
+** string, numeric, boolean
+
+   - eq, .: string context
+   - ==, +: numeric context, convert string to 0
+   - =!!: boolean context
+
+** $_ (it)
+   
+   #+begin_src perl :results output
+     use v5.10;
+
+     $_ = 'hello world';
+
+     say if /hello/;
+
+     s/world/perl/;
+
+     tr/a-z/A-Z/;
+
+     say;
+   #+end_src
+
+   #+RESULTS:
+   : hello world
+   : HELLO PERL
+
+   - default scalar variable.
+   - perl control statmente set it.
+   - perl built-in function such as print, reverse, chomp, etc use it as default.
+   - perl re operator default on it.

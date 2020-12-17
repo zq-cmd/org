@@ -1,0 +1,23 @@
+#+begin_src cpp
+  #include <boost/property_tree/ptree.hpp>
+  #include <boost/property_tree/json_parser.hpp>
+
+  #include <string>
+  #include <sstream>
+  #include <iostream>
+
+  using namespace std;
+  using namespace boost;
+
+  int main() {
+    string s = "{\"a\": 100, \"b\": [1, 2, 3, 4]}";
+    stringstream ss(s);
+    property_tree::ptree ptree;
+    property_tree::read_json(ss, ptree);
+    cout << ptree.get_child("a").data() << endl;
+    // property_tree::write_json("./test.json", ptree);
+  }
+#+end_src
+
+#+RESULTS:
+: 100

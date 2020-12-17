@@ -1,0 +1,82 @@
+#+options: ^:nil
+* container
+  - sequence container
+    - array <array>
+    - vector <vector>
+    - deque <deque>
+    - list <list>
+    - forward list <forward_list>
+  - associative container
+    - (multi)set <set>
+    - (multi)map <map>
+  - unordered associative container
+    - unordered (multi)set <unordered_set>
+    - unordered (multi)map <unordered_map>
+  - adaptor
+    - stack <stack>
+    - (priority) queue <queue>
+* method
+** operator
+   - array 不支持任何 operator.
+   - constructor/destructor/operator= 所有容器均支持.
+   - assign 序列类支持将 n 个相同的元素加入序列.
+** iterator
+   - ([c]onst)([r]evert)[(begin)(end)]
+   - sequence
+     - forward list 仅支持正向叠代器 (c)[(begin)(end)].
+     - 其它容器均支持所有叠代器.
+   - associative 支持所有叠代器.
+   - unordered associative 仅支持正向叠代器 (c)[(begin)(end)].
+   - adaptor 不支持叠代器.
+** access
+   - at/[]
+     - 按 key 取唯一值的 (unordered) map.
+     - 按 index 取值的顺序表 array, vector, deque.
+   - data 连续分配内存的顺序表 array, vector.
+   - front/back
+     - sequence 中仅 forward list 只有 front, 其它两者均有.
+     - adapt
+       - queue 两者均有.
+       - stack 中 top 为栈顶, deque 的 back.
+       - priority queue 中 top 为堆根, deque 的 front.
+** capacity
+   - empty/size
+     - forward list 仅支持 empty, 其它容器均支持 empty/size.
+     - adaptor 仅支持 empty/size.
+   - max_size
+     - 除 adaptor 外所有容器均支持 max_size.
+     - array 仅支持 empty/size/max_size.
+   - resize sequence 除固定大小的 array 外均支持 resize.
+   - [(capacity)(bucket_count)]/reserve
+     - vector capacity 返回已分配空间, reserve 改变([预留][减少])分配的空间.
+     - unordered associative bucket_count 返回 hash 表大小, reserve 改变 hash 表大小.
+   - shrink_to_fit 可变大小的顺序表 vector, deque 回收未使用空间.
+** modifie
+   - 所有容器有内置实现的 swap.
+   - array 不支持 modifie.
+   - clear/erase/insert/emplace
+     - 除 array, adaptor 外所有容器均有 clear/erase/insert/emplace.
+     - forward list 的 [(erase)(insert)(emplace)] 为 [(erase)(insert)(emplace)]_after.
+   - push/pop
+     - sequence
+       - 向后增长的 vector 仅支持 [(pop)(push)(emplace)]_back.
+       - 仅有头指针的 forward list 仅支持 [(pop)(push)(emplace)]_front.
+       - deque, list 支持 [(pop)(push)(emplace)]_[(back)(front)].
+     - adaptor
+       - stack 的 [(pop)(push)(emplace)] 为 deque [(pop)(push)(emplace)]_back.
+       - (priority) queue 的 pop 为 deque pop_front, [(push)(emplace)] 为 [(push)(emplace)] back.
+   - insert_or_assign/try_emplace (unordered) map 若 key 存在则 assign/emplace.
+   - extract
+     - (unordered) associative extract move key/iterator 指定的元素.
+** more
+   - list splice.
+   - forward list splice_after.
+   - (unordered) associative contains.
+** 特殊版本
+   - 所有容器都有特殊版本的 swap.
+   - (forward) list 有特殊版本的 sort, unique, reverse, remove(_if).
+   - (unordered) associative 有特殊版本的 find, count, equal_range.
+   - associative 有特殊版本的 [(lower)(upper)]_bound.
+   - (forward) list, (unordered) associative 有特殊版本的 merge.
+* more
+  - [[./priority-queue.org]]

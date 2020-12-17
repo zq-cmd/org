@@ -1,0 +1,454 @@
+* fcntl
+  #+begin_src cpp
+    #include <fcntl.h>
+    int creat(const char *path, mode_t mode);
+    int open(const char *path, int oflag, ... /* mode_t mode */); // 成功返回 fd, 出错返回 -1
+    int fcntl(int fd, int cmd, ... /* int arg */); // 出错返回 -1
+    #include <unistd.h>
+    int close(int fd); // 0/-1
+    int dup(int fd);
+    int dup2(int fd1, int fd2);
+  #+end_src
+   - creat(path, mode): open(path, O_WRONLY | O_CREAT | O_TRUNC, mode)
+   - mode: S_I[RWX][(USR)(GRP)(OTH)]
+     - R: 文件, 目录可读
+     - W: 文件可写, 目录可增删文件
+     - X: 文件可执行, 目录可搜索给定路径名
+   - oflag
+     - 读写模式
+       - O_RDONLY
+       - O_WRONLY
+       - O_RDWR
+       - 互斥, 用 O_ACCMODE 取得读写模式后与三者比较
+     - O_APPEND
+     - O_TRUNC: 若文件存在且为写 / 读写打开则截断
+     - O_CREAT: 若文件不存在则创建, 使用第三个参数制定 mode
+     - O_EXCL: 若制定 O_CREAT 且文件存在则出错
+     - O_SYNC: 等待数据和属性写
+     - O_DSYNC: 等待数据写
+     - O_RSYNC: 同步读写
+     - O_NOBLOCK: 若 path 为 fifo, 块文件或设备文件, 则设置为非阻塞模式
+   - dup(fd): fcntl(fd, F_DUPFD, 0)
+   - dup2(fd1, fd2): close(fd2); fcntl(fd1, F_DUPFD, fd2)
+   - cmd
+     - F_DUPFD: arg = 0 复制到最小可用的 fd, arg > 0 若 fd = arg 可用则复制到 arg
+     - F_GETFL: 返回 oflag
+     - F_SETFL: 设置 O_APPEND 和 O_*SYNC
+* io
+  #+begin_src cpp
+    #include <unistd.h>
+    off_t lseek(int fd, off_t offset, int whence); // 出错返回 -1, 成功返回新 offset
+    ssize_t read(int fd, void *buf, size_t n); // 出错返回 -1, 成功返回读到字节数
+    ssize_t write(int fd, void *buf, size_t n); // 出错返回 -1, 成功返回写入字节数
+    int fsync(int fd); // 0/-1
+    int fdatasync(int fd); // 0/-1
+    int ftruncate(int fd, off_t length); // 0/-1
+    int truncate(const char *path, off_t length); // 0/-1
+  #+end_src
+  - offset 有符号
+  - whence: SEEK_[(SET)(CUR)(END)]
+  - cur_offset = lseek(fd, 0, SEEK_CUR), -1 则 fd 不可设置偏移量
+  - fsync: 等待数据和属性写
+  - fdatasync: 等待数据写
+* stat
+  #+begin_src cpp
+    #include <sys/stat.h>
+    int fstat(int fd, struct stat *buf); // 0/-1
+    int stat(const char *path, struct stat *buf); // 0/-1
+    int lstat(const char *path, struct stat *buf); // 0/-1
+    int fchmod(int fd, mode_t mode); // 0/-1
+    int chmod(const char *path, mode_t mode); // 0/-1
+    mode_t umask(mode_t mask); // 旧 mask
+    #include <unistd.h>
+    int access(const char *path, int mode); // 0/-1
+    int fchown(int fd, uid_t owner, gid_t group); // 0/-1
+    int chown(const char *path, uid_t owner, gid_t group); // 0/-1
+    int lchown(const char *path, uid_t owner, gid_t group); // 0/-1
+    #include <utime.h>
+    int utime(const char *path, const struct utimebuf *times); // 0/-1
+  #+end_src
+  - a->b: stat: b, fstat: b
+  - stat
+    - st_mode (mode_t)
+      - macro: S_IS[(REG)(DIR)(LNK)(CHR)(BLK)(FIFO)(SOCK)]
+      - mask: S_I[RWX][(USR)(GRP)(OTH)]
+    - st_[ug]id
+    - st_size
+    - st_[amc]time
+      - a read
+      - m write
+      - c ch[(mod)(own)]
+  - access mode: [RWXF]_OK (F_OK: 存在)
+  - mask: 进程局部变量, 默认为 0, 创建文件, 目录时屏蔽 mask 设置为 1 的位
+  - chown: owner/group = -1: 不改变
+  - utimebuf
+    - actime (time_t)
+    - modtime (time_t)
+* link
+  #+begin_src cpp
+    #include <unistd.h>
+    int link(const char *path1, const char *path2); // 0/-1
+    int unlink(const char *path); // 0/-1
+    #include <stdio.h>
+    int remove(const char *path); // 0/-1
+    int rename(const char *path1, const char *path2); // 0/-1
+  #+end_src
+  - remove: 若 path 是文件 call unlink, 若 path 是目录 call rmdir
+  - link 跟随符号连接
+  - unlink, remove, rename 不跟随符号连接 (消除 link)
+* symlink
+  #+begin_src cpp
+    #include <unistd.h>
+    int symlink(const char *path1, const char *path2); // 0/-1
+    ssize_t readlink(const char *path, char *buf, size_t n); // 出错返回 -1, 成功返回读到字节数
+  #+end_src
+  - l[(stat)(chown)] 不跟随符号连接
+  - 符号连接 mode 无意义, 无 lchmod
+* dir
+  #+begin_src cpp
+    #include <sys/stat.h>
+    int mkdir(const char *path, mode_t mode); // 0/-1
+    #include <unistd.h>
+    int rmdir(const char *path); // 0/-1
+    #include <dirent.h>
+    DIR *opendir(const char *path); // 出错返回空指针, 成功返回 dp
+    int closedir(DIR *dp); // 0/-1
+    struct dirent *readdir(DIR *dp); // 出错或结尾返回空指针, 成功返回 dirp
+    void rewinddir(DIR *dp);
+    long telldir(DIR *dp);
+    void seekdir(DIR *dp, long loc);
+  #+end_src
+  - dirent
+    - d_name (char [NAME_MAX + 1])
+  - while (dirp = readdir(dp)) printf("%s\n", dirp->d_name)
+* stdio
+  #+begin_src cpp
+    #include <stdio.h>
+    int fileno(FILE *fp); // fd
+    FILE *fdopen(int fd, const char *type); // 失败返回空指针, 成功返回 fp
+    FILE *fopen(const char *path, const char *type); // 失败返回空指针, 成功返回 fp
+    FILE *freopen(const char *path, const char *type, FILE *fp); // 失败返回空指针, 成功返回 fp
+    int fclose(FILE *fp); // 失败返回 eof, 成功返回 0
+    int fflush(FILE *fp); // 失败返回 eof, 成功返回 0
+    int feof(FILE *fp); // 0/非0
+    int ferror(FILE *fp); // 0/非0
+    void clearerr(FILE *fp); // 0/非0
+    int getc(FILE *fp);
+    int fgetc(FILE *fp); // 失败返回 eof, 成功返回 c
+    int getchar();
+    int putc(int c, FILE *fp);
+    int fputc(int c, FILE *fp); // 失败返回 eof, 成功返回 c
+    int putchar(int c);
+    int ungetc(int c, FILE *fp); // 失败返回 eof, 成功返回 c
+    char *fgets(char *buf, int n, FILE *fp); // 失败返回空指针, 成功返回 buf
+    char *gets(char *buf); // 失败返回空指针, 成功返回 buf
+    int fputs(const char *buf, FILE *fp); // 失败返回 eof, 成功返回非负
+    int puts(const char *buf); // 失败返回 eof, 成功返回非负
+    size_t fread(void *buf, size_t size, size_t n, FILE *fp); // 读对象数
+    size_t fwrite(void *buf, size_t size, size_t n, FILE *fp); // 写对象数
+    void rewind(FILE *fp);
+    long ftell(FILE *fp); // 失败返回 -1, 成功返回当前位置
+    int fseek(FILE *fp, long offset, int whence); // 0/非0
+    int printf(const char *format, ...); // 失败返回负值, 成功返回输出字符数
+    int fprintf(FILE *fp, const char *format, ...); // 失败返回负值, 成功返回输出字符数
+    int sprintf(char *buf, const char *format, ...); // 失败返回负值, 成功返回输出字符数
+    int snprintf(char *buf, size_t n, const char *format, ...); // 失败返回负值, 成功返回输出字符数
+    int scanf(const char *format, ...); // 失败返回 eof, 成功返回输入项数
+    int fscanf(FILE *fp, const char *format, ...); // 失败返回 eof, 成功返回输入项数
+    int sscanf(const char *buf, const char *format, ...); // 失败返回 eof, 成功返回输入项数
+    FILE *tmpfile(); // 失败返回空指针, 成功返回 fp
+  #+end_src
+* select
+  #+begin_src cpp
+    #include <sys/select.h>
+    int select(int maxfd1, fd_set *rfds, fd_set *wfds, fd_set *efds, struct timeval *tvp); // 失败返回 -1, 成功返回 准备好的 fd 数
+  #+end_src
+  - timeval
+    - tv_sec (long)
+    - tv_usec (long)
+  - tvp
+    - NULL: 永久等待
+    - {0, 0}: 测试完所有 fd 后立即返回
+  - fd_set
+    - macro: FD_[(ISSET)(CLR)(SET)(ZERO)]
+    - FD_ISSET(fd, fds)
+    - FD_CLR(fd, fds)
+    - FD_SET(fd, fds)
+    - FD_ZERO(fds)
+  - maxfd: maxfd + 1, 缩小搜索范围
+* poll
+  #+begin_src cpp
+    #include <poll.h>
+    int poll(struct pollfd fds[], nfds_t n, int timeout); // 失败返回 -1, 成功返回 准备好的 fd 数
+  #+end_src
+  - pollfd
+    - fd
+    - events
+      - POLL[(IN)(OUT)([(RD)(WR)][(NORM)(BAND)])]
+      - norm: 普通数据
+      - band: 非 0 数据
+      - POLLIN: POLLNORM|POLLBAND
+    - revents: 由内核设置
+      - events
+      - POLL[(ERR)(HUP)(NVAL)]
+      - hup: 挂断, 只读
+      - nval: fd 不引用文件
+  - timeout 类似 select
+* pwd
+  #+begin_src cpp
+    #include <pwd.h>
+    struct passwd *getpwuid(uid_t uid); // 失败返回空指针, 成功返回 pwdp
+    struct passwd *getpwnam(const char *name); // 失败返回空指针, 成功返回 pwdp
+    void setpwent();
+    void endpwent();
+    struct passwd *getpwent(); // 失败返回空指针, 成功返回 pwdp
+    #include <unistd.h>
+    char *getpass(const char *promot);
+  #+end_src
+  - passwd: zq:1000:1000:vuui:/home/zq:/bin/bash
+  - struct passwd
+    - pw_name
+    - pw_passwd
+    - pw_[ug]id
+    - pw_dir
+    - pw_shell
+  - setpwent(); while(pwdp = getpwent()) printf("%s\n", pwdp->pw_name); endpwent()
+* grp
+  #+begin_src cpp
+    #include <grp.h>
+    struct group *getgrgid(gid_t gid); // 失败返回空指针, 成功返回 grpp
+    struct group *getgrnam(const char *name); // 失败返回空指针, 成功返回 grpp
+    void setgrent();
+    void endgrent();
+    struct group *getgrent(); // 失败返回空指针, 成功返回 grpp
+  #+end_src
+  - group
+    - gr_gid
+    - gr_name
+    - gr_mem (char **)
+* cwd
+  #+begin_src cpp
+    #include <unistd.h>
+    char *getcwd(char *buf, size_t n); // 失败返回空指针, 成功返回 buf
+    int fchdir(int fd); // 0/-1
+    int chdir(const char *path); // 0/-1
+  #+end_src
+* env
+  #+begin_src cpp
+    #include <stdlib.h>
+    char *getenv(const char *key); // 失败返回空指针, 成功返回 val
+    int putenv(char *str); // 0/非0
+    int setenv(const char *key, const char *val, int rewrite); // 0/非0
+    int unsetenv(const char *key); // 0/非0
+  #+end_src
+  - rewirte: 若为 0 则不删除现有 env
+* exit
+  #+begin_src cpp
+    #include <stdlib.h>
+    void exit(int status);
+    int atexit(void (*func)()); // 0/非0
+    #include <unistd.h>
+    void _exit(int status);
+  #+end_src
+  - exit 执行 atexit 注册的函数, _exit 不执行
+* alloc
+  #+begin_src cpp
+    #include <stdlib.h>
+    void *malloc(size_t size); // 失败返回空指针, 成功返回 p
+    void *calloc(size_t n, size_t size); // 失败返回空指针, 成功返回 p
+    void *realloc(void *p, size_t size); // 失败返回空指针, 成功返回 p
+    void free();
+  #+end_src
+  - realloc size: 新存储区长度
+* id
+  #+begin_src cpp
+    #include <unistd.h>
+    pid_t getpid();
+    pid_t getppid();
+    uid_t getuid();
+    uid_t geteuid();
+    gid_t getgid();
+    gid_t getegid();
+    int setuid(uid_t uid); // 0/-1
+    int setgid(gid_t gid); // 0/-1
+    char *getlogin();
+  #+end_src
+* process
+  #+begin_src cpp
+    #include <unistd.h>
+    pid_t fork(); // 失败返回 -1, 成功父进程返回 pid, 子进程返回 0
+    int execvp(const char *filename, char *const argv[]);
+    int execv(const char *path, char *const argv[]);
+    int execve(const char *path, char *const argv[], char *const envp[]); // 失败返回 -1, 成功无返回值
+    int execlp(const char *filename, const char *arg, ... /* (char *) 0 */);
+    int execl(const char *path, const char *arg, ... /* (char *) 0 */);
+    int execle(const char *path, const char *arg, ... /* (char *) 0, char *const envp[] */);
+    #include <sys/wait.h>
+    pid_t wait(int *statloc);
+    pid_t waitpid(pid_t pid, int *statlos, int options); // 失败返回 -1, 成功返回 pid
+    #include <stdlib.h>
+    int system(const char *cmd);
+  #+end_src
+  - status
+    - macro: WIF[(EXIT)(SIGNAL)(STOPP)(CONTINU)]ED
+    - exit: WEXITSTATUS 获取返回值
+    - signal: WTERMSIG 获取信号
+    - stop: WSTOPSIG 获取使进程停止的信号
+  - waitpid pid
+    - -1 任何子进程
+    - 0 组内任何子进程
+  - waitpid options
+    - WNOHANG: 非阻塞
+    - WCONTINUED: continued 且未终止的子进程
+    - WTRACED: stopped 且未终止的子进程
+  - wait(statloc): waitpid(0, statloc, 0)
+  - exec
+    - l: list
+    - v: vector
+    - p: path
+    - e: env
+    - l->v, execvp->execv->execve
+* pg
+  #+begin_src cpp
+    #include <unistd.h>
+    pid_t getpgrp();
+    pid_t getpgid(pid_t pid); // 失败返回 -1, 成功返回 pgid
+    int setpgid(pid_t pid, pid_t pgid); // 0/-1
+  #+end_src
+  - 进程组: 接受同一终端产生的信号, 以 leader 进程的 pid 为 pgid (无论 leader 是否结束)
+  - 只能设置自身和未 exec 的子进程的 pgid
+  - getpgrp(): getpgid(0)
+* session
+  #+begin_src cpp
+    #include <unistd.h>
+    pid_t setsid(); // 失败返回 -1, 成功返回 p(g)id
+    pid_t getsid(pid_t pid); // 失败返回 -1, 成功返回 pgid
+    pid_t tcgetpgrp(int fd); // 失败返回 -1, 成功返回 pgid
+    pid_t tcsetgrp(int fd, pid_t pgid); // 0/-1
+    pid_t tcgetsid(int fd); // 失败返回 -1, 成功返回 sid
+  #+end_src
+  - setsid
+    - 若进程是一个进程组的组长, 则失败
+    - 进程变成新 session 的新 leader pg 的 leader
+    - 若有控制终端, 则关闭
+  - getsid
+    - pid 为 0 返回该进程 sid
+    - pid 只能同 session
+  - session
+    - 若 session 有控制终端, 则 session 有一个前台进程组, 若干后台进程组
+    - 控制终端产生的信号发给前台进程组所有进程
+    - 网络断开信号发给 session leader
+* signal
+  | SIGCHLD | 子进程终止或停止          | 忽略      |
+  | SIGCONT |                           | 继续      |
+  | SIGSTOP | 不可捕获                  | 暂停      |
+  | SIGKILL | 不可捕获                  | 终止      |
+  | SIGTERM | kill 命令默认信号         | 终止      |
+  | SIGTSTP | C-z, 终端信号             | 暂停      |
+  | SIGINT  | C-c, 终端信号             | 终止      |
+  | SIGQUIT | C-\, 终端信号             | 终止+Core |
+  | SIGHUP  | 端口断开 (session leader) | 终止      |
+  | SIGPIPE | 写到关闭的管道            | 终止      |
+  | SIGALRM | alarm 产生                | 终止      |
+  | SIGABRT | abort 产生                | 终止+Core |
+  #+begin_src cpp
+    #include <signal.h>
+    typedef void func(int);
+    func *signal (int, func *);
+    int kill(pid_t pid, int signo); // 0/-1
+    int raise(int signo);
+    #include <unistd.h>
+    unsigned int alarm(unsigned int sec); // 剩余秒数
+    unsigned int sleep(unsigned int sec); // 剩余秒数
+    int pause(); // -1
+    #include <stdlib.h>
+    void abort();
+    #include <string.h>
+    char *strsignal(int signo);
+  #+end_src
+  - raise(signo): kill(getpid(), signo)
+  - kill pid
+    - 0: 该进程所在进程组
+    - -1: 所有权限允许的进程
+  - pause: 执行一个信号处理程序后返回
+* pipe
+  #+begin_src cpp
+    #include <unistd.h>
+    int pipe(int fds[2]); // 0/-1
+    #include <stdio.h>
+    FILE *popen(const char *cmd, const char *type); // 失败返回空指针, 成功返回 fp
+    int pclose(FILE *fp); // 失败返回 -1, 成功返回 status
+  #+end_src
+  - fds[0] 只读, fds[1] 只写
+  - int fds[2]; pipe(fds); pid = fork(); if (pid) close(fds[0]); else close(fds[1])
+  - popen: fork exec cmd 子进程, 并设置管道到子进程的 std[(in)(out)]
+  - pclose: 关闭 fp 的 io 流, 等待 popen fork 的子进程结束
+  - type: 在父进程的角度 fp 的只读 / 只写
+* fifo
+  #+begin_src cpp
+    #include <sys/stat.h>
+    int mkfifo(const char *path, mode_t mode); // 0/-1
+  #+end_src
+  - mkfifo: O_CREAT | O_EXCL
+  - 对 fifo 文件调用 open 时, 只读 (写) 打开要阻塞到 fifo 文件被另一个进程只写 (读) 打开
+  - O_NONBLOCK 时如果会阻塞则返回 -1
+* mq
+  #+begin_src cpp
+    #include <mqueue.h>
+    mqd_t mq_open(const char *name, int oflag, ... /*mode_t mode, mq_attr *attr*/); // 失败返回 -1, 成功返回 mqd
+    int mq_close(mqd_t mqd); // 0/-1
+    int mq_unlink(const char *name); // 0/-1
+    int mq_getattr(mqd_t mqd, struct mq_attr *attr); // 0/-1
+    int mq_setattr(mqd_t mqd, const struct mq_attr *attr1, struct mq_attr *attr2); // 0/-1
+    int mq_send(mqd_t mqd, const char *buf, size_t n, unsigned int prio); // 0/-1
+    ssize_t mq_receive(mqd_t mqd, char *buf, size_t n, unsigned int *prio); // 失败返回 -1, 成功返回读到字节数
+  #+end_src
+  - mq_open
+    - oflag: O_[([(RD)(WR)]ONLY)(RDWR)(CREAT)(EXCL)(NONBLOCK)]
+    - O_CREAT 要指定 mode, attr
+  - mq_attr
+    - mq_flags: 0, O_NONBLOCK
+    - mq_msgsize
+    - mq_maxmsg
+    - mq_curmsgs
+  - MQ_[(OPEN)(PRIO)]_MAX
+* sem
+  #+begin_src cpp
+    #include <semaphore.h>
+    sem_t *sem_open(const char *name, int oflag, ... /* mode_t mode, unsigned int value */); // 失败返回 SEM_FAILED, 成功返回 semp
+    int sem_close(sem_t *sem); // 0/-1
+    int sem_unlink(const char *name); // 0/-1
+    int sem_post(sem_t *sem); // 0/-1
+    int sem_wait(sem_t *sem); // 0/-1
+    int sem_trywait(sem_t *sem); // 0/-1
+    int sem_getvalue(sem_t *sem, int *val); // 0/-1
+    int sem_init(sem_t *sem, int shared, unsigned int value); // 0/-1
+    int sem_destroy(sem_t *sem); // 0/-1
+  #+end_src
+  - sem_open oflag: O_[(CREAT)(EXCL)]
+  - sem_[(init)(destroy)] 维护匿名信号量, 若 shared 为 0, 则 sem 在进程内使用, 若 shared 非 0, 则 sem 应在共享内存共多个进程使用
+  - SEM_[(NSEMS)(VALUE)]_MAX
+* mman
+  #+begin_src cpp
+    #include <sys/mman.h>
+    void *mmap(void *addr, size_t n, int prot, int flags, int fd, off_t offset); // 失败返回 MAP_FAILED, 成功返回地址
+    int munmap(void *addr, size_t n); // 0/-1
+    int msync(void *addr, size_t n, int flags);
+    int shm_open(const char *name, int oflag, mode_t mode); // 失败返回 -1, 成功返回 fd
+    int shm_unlink(const char *name); // 0/-1
+  #+end_src
+  - mmap
+    - addr: 进程内地址, NULL 由内核选择
+    - n: 指定空间大小
+    - prot: PROT_[(READ)(WRITE)(EXEC)(NONE)]
+    - flag: MAP_[(SHARED)(PRIVATE)]
+      - shared: 子进程继承父进程的内存映射
+    - fd, offset: 指定文件及偏移量
+  - munmap: 仅对 MAP_SHARED 内存映射有效
+  - msync flags: MS_(A)SYNC( | MS_INVALIDATE)
+    - sync: 同步
+    - async: 异步
+    - invalidate: 清理缓存
+  - shm
+    - shm_open oflag: O_RD[(WR)(ONLY)]( | O_[(CREAT)(EXCL)(TRUNC)])
+    - shm 可用 ftruncate 改变大小, 用 mmap 内存映射访问

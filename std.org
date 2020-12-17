@@ -1,0 +1,37 @@
+- [[./utility.org]]
+- [[./stl.org]]
+* tips
+  - typename
+    - 模板中类内部类型必须用 typename 标注.
+  - 成员模板
+    #+begin_src cpp
+      template <class T>
+      class A {
+        // 成员函数, 构造函数均可模板, 不能 virtual, 也不能缺省.
+        // 模板成员函数不会覆盖其他函数, 如 A(A<T>) 会使用默认构造函数为非模板构造函数.
+        template <class X>
+        A(X x);
+        template <class X>
+        void f(A<X> x);
+      };
+    #+end_src
+  - koening lookup
+    #+begin_src cpp
+      #include <iostream>
+
+      using namespace std;
+
+      namespace Test {
+        struct A {};
+        void f (A& a) {cout << "hello";}
+      };
+
+      int main() {
+        Test::A a;
+        // 参数 a namespace 空间为 Test, f 不必声明空间 Test.
+        f(a);
+      }
+    #+end_src
+
+    #+RESULTS:
+    : hello

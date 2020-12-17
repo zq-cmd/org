@@ -1,0 +1,24 @@
+#+begin_src sh :results verbatim org :results verbatim drawer 
+  gpg --list-keys
+#+end_src
+
+#+RESULTS:
+:results:
+/home/zq/.gnupg/pubring.kbx
+---------------------------
+pub   rsa3072 2020-11-16 [SC] [expires: 2022-11-16]
+      78ED2D8F6F296A018E22C0BDF81A6CE51D34A5EE
+uid           [ultimate] vhqrvhqr
+sub   rsa3072 2020-11-16 [E] [expires: 2022-11-16]
+
+:end:
+
+#+begin_src sh
+  gpg --output pub --armor --export vhqrvhqr
+  gpg --output sec --armor --export-secret-key vhqrvhqr
+#+end_src
+
+#+begin_src sh
+  gpg --import ./pub
+  gpg --allow-secret-key-import --import ./sec
+#+end_src
