@@ -12,6 +12,12 @@
 
   quotepath: 解决中文显示问题
 
+* curlrc
+
+  #+begin_src conf :babel ~/.curlrc
+    proxy = socks5h://localhost:1999
+  #+end_src
+
 * v2ray install
 
   #+begin_src sh
