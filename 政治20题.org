@@ -1,3 +1,6 @@
+#+latex_header: \usepackage{ctex}
+#+latex_compiler: xelatex
+
 * 新冠                                                                 :新冠:
 
 ** 人类需要自我革命                                                    :环境:

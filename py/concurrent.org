@@ -1,0 +1,87 @@
+#+property: header-args :session Python
+
+* threading
+
+  - get_[(native_id)(ident)]
+  - main_thread, enumerate, active_count
+  - Thread(target=None)
+    - native_id, ident, deamon
+    - run: 运行 target, 或子类重载该方法
+    - start: 在新线程中调用 run
+    - join: 等待线程结束
+    - is_alive
+  - R?Lock
+    - acquire/release/locked
+  - Condition(lock=RLock)
+    - 基于 R?Lock, 默认 RLock.
+    - acquire/release/locked
+    - wait, wait_for(predicate)
+    - notify(n=1), notify_all
+    - wait release lock 并阻塞该线程,
+      直到其它线程调用该 Condition 的 notify(_all)? 并通知该线程.
+  - (Bounded)?Semaphore(n=1)
+    - acquire, release(n=1)
+    - bounded 检查信号量不会超过初始值.
+  - Event
+    - is_set, set, wait, clear
+  - Barrier(parties)
+    - parties 个线程 wait Barrier 时释放.
+    - parties, n_waiting, broken
+    - wait, reset, abort
+    - 正常释放或超时使 Barrier 进入 broken 状态.
+    - 未正常释放的 wait (reset, abort) 或 wait broken Barrier throw BrokenBarrierError.
+  - Timer(Thread)(interval, function)
+    - cancel
+
+* queue
+
+  - queue.[(Empty)(Full)]: 对空或满的 queue 无阻塞操作引发异常.
+  - [(Life)(Priority)]?Queue(maxsize=0)
+    - qsize, empty, full
+    - [(put)(get)](block=True, timeout=None),
+      [(put)(get)]_nowait: [(put)(get)](False), task_done
+    - join
+    - q.get() 到 item 后, 执行 q.task_done() 使计数 -1, join 阻塞线程至 queue 计数为 0.
+
+* multiprocessing
+
+  | threading                              | multiprocessing                        |
+  |----------------------------------------+----------------------------------------|
+  | get_native_id, ident                   | os.pid                                 |
+  | main_thread                            | current_process, parent_process        |
+  | enumerate, active_count                | active_children                        |
+  |----------------------------------------+----------------------------------------|
+  | Thread                                 | Process                                |
+  | native_id, ident, deamon               | pid, ident, deamon, exitcode           |
+  | run, start, join, is_alive             | run, start, join, is_alive             |
+  |                                        | terminate, kill, close                 |
+  |----------------------------------------+----------------------------------------|
+  | queue                                  | JoinableQueue[[Queue]]                 |
+  | R?Lock, Condition, (Bounded)?Semaphore | R?Lock, Condition, (Bounded)?Semaphore |
+  | Event, Barrier                         | Event, Barrier                         |
+  | Timer                                  |                                        |
+  |----------------------------------------+----------------------------------------|
+
+
+  - Pipe
+    - Pipe() 返回两个 Connection: p1, p2 = Pipe()
+    - Connection
+      - [(recv)(send)](_bytes)?, close
+      - poll (是否有可读信息), closed
+  - <<Queue>>
+    Queue: 基于 Pipe 实现的无 task_done 和 join 的 queue.
+    JoinableQueue: 基于 Queue 实现的有 task_done 和 join 的 queue.
+  - 共享内存
+    - Value (ctypes 类型或 array 的类型码), Array
+    - Manager: 新建 SyncManager 进程管理共享内存.
+      - m.[(list)(dict)(Value)(Array)]
+      - m.[(R?Lock)(Condition)((Bounded)Semphere)(Event)(Barrier)(Queue)]
+    - managers.BaseManager(address=None, authkey=None)
+      - address 指定监听地址或连接地址, 若 address == None, 则可连接任意地址.
+      - 监听: start 开始, shutdown 结束.
+      - 连接: connect.
+  - pool.Pool
+    - [(apply)((star)?map)](_async)?: sync 阻塞到返回结果, async 时返回 pool.AsyncResult 对象
+    - close, join, terminate
+  - pool.AsyncResult
+    - get, wait, ready, successful

@@ -90,3 +90,15 @@
         }
     }
   #+end_src
+
+* proxychains
+
+  #+begin_src conf :babel ~/.proxychains/proxychains.conf
+    strict_chain
+    proxy_dns 
+    tcp_read_time_out 15000
+    tcp_connect_time_out 8000
+
+    [ProxyList]
+    socks5 	127.0.0.1 1999
+  #+end_src

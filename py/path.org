@@ -1,0 +1,36 @@
+#+property: header-args :session Python
+
+* pathlib.Path
+
+** Path
+
+   - Path.[(cwd)(home)](), Path("path")
+   - p/p1/p2/p3/... | p.joinpath(p1, p2, p3, ...)
+   - p.[(drive)(root)(anchor)(parents?)(name)(stem)(suffix(es)?)]
+ 
+** test
+
+   - exists, samefile
+   - is_[(absolute)(relative_to)]
+   - is_[(dir)(file)(mount)(symlink)(socket)(fifo)([(block)(char)_device])]
+
+** new Path
+
+   - absolute, expanduser, resolve (symlink)
+   - with_[(name)(stem)(suffix)]
+   - as_[(posix)(uri)]
+   - iterdir, r?glob
+
+** op
+
+   - owner, group, l?stat, readlink
+   - l?chmod, touch, [(mk)(rm)]dir, (sym)?link_to, unlink, rename
+   - open, [(read)(write)]_[(bytes)(text)]
+
+* shutil
+
+  - move(src, dst, copy_function=copy2). copy:文件和权限, copy2: +时间戳等元信息.
+  - copytree(src, dst, symlinks=False, ignore=None, copy_function=copy2, ...).
+    ignore: shutil.ignore_pattern(*patterns).
+  - rmtree(path).
+  - make_archive(base_name, format), unpack_archive(path), format: zip, ([gbx]z)?tar.

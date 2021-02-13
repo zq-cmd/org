@@ -1,0 +1,103 @@
+#+property: header-args :session Python
+
+* 内置函数
+
+** __iter__, __next__
+
+   - iterable.__iter__() 返回 iter 对象.
+   - iter.__iter__() 返回其本身.
+   - iter.__next__() 返回值或 StopIteration (generator).
+   - sorted(iterable, *, key, reverse) 返回 list, iterable 或 key(iterable) 可比较.
+   - list 有 sort 方法 sort 自身.
+
+** __contains__, __len__, __getitem__, __reversed__
+
+   - reversed(reversable) 返回 reversed iter.
+   - reversable: 实现 __len__ 和 __getitem__(int), 或实现 __reversed__.
+   - 一般 reversable 可变对象有 reversed 方法 reverse 自身.
+
+** 容器
+
+   - 容器一般实现 __iter__, __contains__, __len__, __getitem__,
+     支持 for, next, in, not in, len.
+   - 序列容器实现 __getitem__(int), reversable.
+   - 集合容器没有 __getitem__.
+   - 集合, 映射容器的 key 为 hashable, 即实现 __hash__.
+   - 不可变容器一般 hashable.
+   - 可变容器一般实现 clear, remove, pop, remove 和 pop 不同.
+
+** copy
+
+   - copy: c.copy(), copy.copy(c)
+   - deepcopy: copy.deepcopy(c) throw copy.error
+
+* tuple, list
+
+  - +* (extend: +=)
+  - index, count
+  - 切片, list 可修改切片
+  - insert
+  - append: += [x]
+  - remove: del value=x
+  - pop: del index=-1
+
+* frozenset, set
+
+  - [<>]=?, |&-^
+    - is[(sub)(supper)]set|union|intersection|(symmetric_)?difference
+    - 可变集合还支持 [|&-^]=
+      - ([(intersection)((symmetric_)?difference)]_)?update
+  - isdisjoint: len(a&b) == 0
+  - add|discard: [|-]= set(x)
+  - remove: del key=x or KeyError
+  - pop: del&return random or KeyError
+
+* dict
+
+  - dict 按插入顺序排序, update 不改变顺序.
+  - d.[(key)(value)(item)]s() 返回 dict_[(key)(value)(item)]s 类型只读序列, 随 d 改变.
+  - d.__iter__ == d.keys.
+  - reversed(d) == reversed(d.keys()).
+  - dict 支持 |, update value.
+    - update: |=
+  - 映射支持
+    - get: d[k] if k else v
+    - setdefault: d[k]=v if k
+    - pop: del&return value where key=k or KeyError
+    - popitem: del&return item where ord=-1 or KeyError
+  - remove: undefined.
+
+* collections.defaultdict(dict)
+
+  - 新增成员 default_factory 为无参数函数.
+  - update d[key] = default_factory() if d[key] raise KeyError.
+
+* collections.Counter(dict)
+
+  - 用 value 保存计数实现 multiset.
+  - update, subtract 更新计数, | not override.
+  - most_common 返回最常见的 n 个元素的 list.
+  - elements 返回计数迭代器, key 返回 value 次, 忽略 value < 1.
+  - Counter 不是 defaultdict 的子类, 但实现了 default_factory() = 0.
+
+* collections.ChainMap
+
+  - 用 list: cm.maps = child + cm.parents 存储多个映射容器,
+    包括 dict 和 ChainMap 本身, 支持 dict 一切操作.
+  - 仅修改 child, cm.parents 仅供访问.
+  - cm.keys 按 reserved(cm.maps) 去重.
+  - cm.new_child(x=None): ChainMap(x, *cm.maps).
+
+* collections.deque
+
+  - 若指定 maxlen, 当 len == maxlen 时, 一端元素入队另一端元素出队.
+  - 支持 list 几乎所有操作.
+  - 额外支持 [(append)(extend)(pop)]left, rotate.
+
+* heapq
+
+  - 维护 list 为小根堆 heap.
+  - heapify 将 list 调整为 heap.
+  - heappush, heappop, heappushpop: push + pop, heapreplace: pop + push.
+  - n[(larg)(small)]est(n, iterable, key): soted(iterable, key=key, (reverse = True)?)[:n].
+  - merge(*iterables) 合并已排序的 iterables.

@@ -1,0 +1,133 @@
+#+property: header-args :session Python
+
+* bytes, bytearray, str
+
+** 转化
+
+   - bs = s.encode(encoding='utf-8')
+   - s = [(bs)(ba)].decode(encoding='utf-8')
+   - bs.hex()
+   - bytes.fromhex(hex)
+   - i.to_bytes(length, byteorder)
+   - int.from_bytes(bs, byteorder)
+   - f.hex()
+   - float.fromhex(hex)
+
+** 序列
+
+   - bytes, str 是不可变序列, bytearray 是可变序列.
+   - 不存在 byte, char 类型元素, [], in, count, index 等作用于子序列.
+   - r?[(index)(find)]: index throw KeyError, find return -1
+   - is[(ascii)(space)(alpha)(digit)(alnum)(lower)(upper)(title)]
+     - str 额外支持 is[(decimal)(numeric)(printable)]
+   - [(start)(end)]with
+   - lower, upper, capitalize, title, swapcase
+   - [lr]?strip, remove[(prefix)(suffix)]
+   - [lr]just, center, zfill
+   - replace, translate([(str)(bytes)(bytearray)].maketrans), expandtabs
+   - r?[(split)(partition)], splitlines, join
+
+* array
+
+  | 类型码 | c 类型    | pyhton 类型  | 最小长度 |
+  |--------+-----------+--------------+----------|
+  | u      | wchar_t   | unicode char |        2 |
+  | b      | char      | int          |        1 |
+  | h      | short     | int          |        2 |
+  | i      | int       | int          |        2 |
+  | l      | long      | int          |        4 |
+  | q      | long long | int          |        8 |
+  | f      | float     | float        |        4 |
+  | d      | double    | float        |        8 |
+
+  - python int 类型都有无符号版本 (upper).
+  - a.typecode 类型, a.itemsize 类型长度.
+  - array 支持 list 几乎所有操作.
+  - byteswap 转换大小端.
+  - [(to)(from)][(list)(bytes)(unicode)(file)].
+
+* memoryview
+
+  - memoryview(obj), obj 为支持缓冲区协议的对象: bytes, bytearray, array.
+  - memoryview 是序列, 可变性与 obj 一致, 支持 array 几乎所有操作, 但不可改变大小.
+  - __eq__ 判断导出 struct 是否形状相同, 各位置 __eq__ 相等.
+  - m.obj obj, m.readonly 可变性, m.format 类型, m.itemsize 类型长度,
+    m.ndim 维度, m.shape 形状, m.nbytes 大小 (按字节).
+  - toreadonly 返回不可变 memoryview.
+  - cast 返回改变形状后的 memoryview.
+  - release 释放内存, 继续调用除 release 以外的操作会 ValueError.
+
+  #+begin_src python :results output
+    with memoryview(b'1234') as m:
+        print(m.cast('B', shape=[2, 2]).tolist())
+  #+end_src
+
+  #+RESULTS:
+  : [[49, 50], [51, 52]]
+
+* struct
+
+  - 前缀: @本机 (默认, 无填充), =本机标准化, <小端标准化, >大端标准化, !网络 (大端) 标准化.
+  - 新添格式
+    - x: 填充字节.
+    - ?: bool 类型.
+    - c: 字符, s: 字符串.
+      - 10c: 10 字符, 10s: 10 字符的字符串.
+      - 打包时会自动截断或填充.
+    - e: 长度为 2 的小浮点数.
+    - nN: s?size_t, p: void* 仅限本机使用.
+  - pack(_into)?, unpack(_from)?, into/from 给定 buffer 和 offset.
+  - struct.Struct(format)
+    - format, size, pack(_into)?, unpack(_from)?
+    - iter_unpack
+
+  #+begin_src python :results output
+    import struct
+
+    pack = struct.pack("10sii", b"hello", 123, 456)
+    unpack = struct.unpack("10sii", pack)
+
+    print(f'pack: {pack}\nunpack: {unpack}')
+  #+end_src
+
+  #+RESULTS:
+  : pack: b'hello\x00\x00\x00\x00\x00\x00\x00{\x00\x00\x00\xc8\x01\x00\x00'
+  : unpack: (b'hello\x00\x00\x00\x00\x00', 123, 456)
+
+* ctypes
+
+  #+begin_src python :results output
+    import ctypes
+
+    libc = ctypes.cdll.LoadLibrary("libc.so.6")
+    c_printf = libc["printf"] # or libc.printf
+    c_printf(ctypes.c_char_p(b"hello, %s"), ctypes.c_char_p(b"world"))
+  #+end_src
+
+  #+RESULTS:
+  : hello, world
+
+  - cdll.LoadLibrary
+  - type
+    - c_u?[(byte)(short)(int[8(16)(32)(64)]?)(long(long)?)], c_s?size_t
+    - c_float, c_(long)?double
+    - c_char, c_[(char)(void)]_p
+
+  #+begin_src python
+    import ctypes
+
+    class Point(ctypes.Structure):
+        _fields_ = [("x", ctypes.c_byte), ("y", ctypes.c_byte)]
+
+    PointArray = Point * 4
+
+    pa = PointArray(Point(1, 2), Point(3, 4), Point(5, 6), Point(7, 8))
+
+    memoryview(pa).hex()
+  #+end_src
+
+  #+RESULTS:
+  : 102030405060708
+
+  - Structure, POINTER, pointer, contents, cast
+  - sizeof, resize

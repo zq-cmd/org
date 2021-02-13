@@ -1,0 +1,93 @@
+#+property: header-args :session Python
+
+* bool
+
+  逻辑值: __bool__ 返回 False, 或 __len__ 返回 0 时为 False.
+
+  1. None.__bool__() = False.
+  2. False.__bool__() = False.
+  3. 数值类型的 0, 如 int: 0.__bool__() = False.
+  4. 空的序列和多项集, 如 list: [].__len__() = 0.
+
+  运算: bool, and, or, not, [<>]?=, is, is not, in, not in.
+
+  比较通过定义 __[lg][et]__, __eq__ 实现,
+  常规比较只需要定义 __lt__ 和 __eq__.
+
+  is, is not 判断两个变量是否指向同一个对象, 无法定义.
+
+  in, not in 类似, 由 iterable 或定义 __contains__ 实现.
+
+* int, float, complex
+
+  - +-*/, abs, pow.
+  - //, %, divmod.
+  - &|^~, <<, >>.
+  - round, math.(trunc, floor, ceil).
+  - float: f.is_integer().
+  - complex: c.conjugate(), c.real, c.imag.
+
+  #+begin_src python
+    n = 123
+    a = bin(n)
+    b = n.bit_length()
+    c = n.to_bytes(2, byteorder='big')
+    d = int.from_bytes(c, byteorder='big')
+    f'bin(n): {a}, n.bit_length(): {b},\n\
+    n.to_bytes(...): {c}, int.from_bytes(...): {d}'
+  #+end_src
+
+  #+RESULTS:
+  : bin(n): 0b1111011, n.bit_length(): 7,
+  : n.to_bytes(...): b'\x00{', int.from_bytes(...): 123
+
+  #+begin_src python
+    f = 1.25
+    a = f.hex()
+    b = float.fromhex(a)
+    f'f.hex(): {a}, float.fromhex(...): {b}'
+  #+end_src
+
+  #+RESULTS:
+  : f.hex(): 0x1.4000000000000p+0, float.fromhex(...): 1.25
+
+* math
+
+  - 常量
+    - nan, inf, isnan(), isinf(), isfinite(): not isnan() or isinf()
+    - e, pi, tau = 2pi
+  - 取整
+    - round, trunc, floor(下), ceil(上), nextafter(y)
+  - 数论, 概率论
+    - gcd
+    - isqrt: floor(sqrt(x))
+    - factorial: x!
+    - perm: A_{n}^{k}
+    - comb: C_{n}^{k}
+  - 三角
+    - a?[(sin)(cos)(tan2?)]h?
+    - degrees, radians: radian<=>degree
+    - hypot: $\sqrt{\sum x^2}$, dist: hypot([a, b])
+  - 幂, 对数
+    - pow, sqrt, exp, log[2(10)]?
+
+* random
+
+  - 随机整数
+    - randrange
+    - randint: randrange(a, b+1)
+    - getrandbits: randrange(0, 2^k)
+  - 随机实数
+    - random: [0, 1)
+  - 序列
+    - choice: C_{n}^{1}
+    - sample: C_{n}^{k}
+    - shuffle
+
+* statistics
+
+  - mean: 平均数
+  - median: 中位数
+  - mode: 众数
+  - stdev: 标准差
+  - variance: 方差
