@@ -1,21 +1,21 @@
 * gitconfig
 
-  #+begin_src conf :babel ~/.gitconfig
+  #+begin_src conf :tangle ~/.gitconfig
     [user]
             name = zq-cmd
             email = zq_cmd@163.com
     [core]
             quotepath = false
     [http]
-            proxy = socks5h://127.0.0.1:1999
+            proxy = socks5h://127.0.0.1:31337
   #+end_src
 
   quotepath: 解决中文显示问题
 
 * curlrc
 
-  #+begin_src conf :babel ~/.curlrc
-    proxy = socks5h://localhost:1999
+  #+begin_src conf :tangle ~/.curlrc
+    proxy = socks5h://localhost:31337
   #+end_src
 
 * v2ray install
@@ -52,7 +52,7 @@
     // china ip
 
     {
-        "inbounds": [{"port": 1999, "listen": "127.0.0.1", "protocol": "socks", "settings": {"auth": "noauth"}}],
+        "inbounds": [{"port": 31337, "listen": "127.0.0.1", "protocol": "socks", "settings": {"auth": "noauth"}}],
         "outbounds": [
             {
                 "protocol": "vmess",
@@ -74,7 +74,7 @@
     // direct
 
     {
-        "inbounds": [{"port": 1999, "listen": "127.0.0.1", "protocol": "socks", "settings": {"auth": "noauth"}}],
+        "inbounds": [{"port": 31337, "listen": "127.0.0.1", "protocol": "socks", "settings": {"auth": "noauth"}}],
         "outbounds": [
             {
                 "protocol": "vmess",
@@ -93,12 +93,12 @@
 
 * proxychains
 
-  #+begin_src conf :babel ~/.proxychains/proxychains.conf
+  #+begin_src conf :tangle ~/.proxychains/proxychains.conf
     strict_chain
     proxy_dns 
     tcp_read_time_out 15000
     tcp_connect_time_out 8000
 
     [ProxyList]
-    socks5 	127.0.0.1 1999
+    socks5 	127.0.0.1 31337
   #+end_src
