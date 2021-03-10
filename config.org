@@ -93,7 +93,7 @@
 
 * proxychains
 
-  #+begin_src conf :tangle ~/.proxychains/proxychains.conf
+  #+begin_src conf :tangle ~/.proxychains/proxychains.conf :mkdirp yes
     strict_chain
     proxy_dns 
     tcp_read_time_out 15000
