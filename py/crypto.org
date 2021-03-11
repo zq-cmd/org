@@ -1,0 +1,223 @@
+#+property: header-args :session Python :results output
+
+#+begin_src python
+  from cryptography.fernet import Fernet
+  # from cryptography.fernet import MultiFernet
+
+  key = Fernet.generate_key()
+  print(f'key: {key}')
+  # key1 = Fernet(Fernet.generate_key())
+  # key2 = Fernet(Fernet.generate_key())
+  # f = MultiFernet([key1, key2])
+  f = Fernet(key)
+
+  token = f.encrypt(b'hello world')
+  print(f'token: {token}')
+
+  print(f'decrypt: {f.decrypt(token)}')
+#+end_src
+
+#+RESULTS:
+: key: b'3qUqmxpIG4AK-Fu5-SYbs0tKWJEf0X2dA8lrWE-rgSg='
+: token: b'gAAAAABgSFXdezOgAtX_AlPLZ9NvUOueKAREp1-Wnx7n9bcI1_k0Msfl5k-Nm3mh5QpwuXoEfPYrV3Owrf2fwcIRECsldj5pNA=='
+: decrypt: b'hello world'
+
+#+begin_src python
+  import base64
+  import os
+  from cryptography.fernet import Fernet
+  from cryptography.hazmat.primitives import hashes
+  from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+
+  password = b'this is a password'
+  salt = os.urandom(16)           # 128 bits
+  kdf = PBKDF2HMAC(
+      algorithm=hashes.SHA256(),
+      length=32,                  # 256 bits
+      salt=salt,
+      iterations=100000,
+  )
+  key = base64.urlsafe_b64encode(kdf.derive(password))
+  f = Fernet(key)
+  token = f.encrypt(b'hello world')
+  print(f'decrypt: {f.decrypt(token)}')
+#+end_src
+
+#+RESULTS:
+: decrypt: b'hello world'
+
+1. fernet is built on top of =aes cbc mode= with 128b pkcs7 padding.
+2. [[https:en.wikipedia.org/wiki/PBKDF2][pbkdf2]]
+   1) pbkdf2(hash_function, password, salt, iter_times, len)
+
+
+#+begin_src python
+  from cryptography.hazmat.primitives import serialization
+  from cryptography.hazmat.primitives.asymmetric import rsa
+
+  key = rsa.generate_private_key(
+      public_exponent=65537,
+      key_size=2048,
+  )
+
+  key_pem = key.private_bytes(
+      encoding=serialization.Encoding.PEM,
+      format=serialization.PrivateFormat.TraditionalOpenSSL,
+      encryption_algorithm=serialization.BestAvailableEncryption(b'passwd'),
+  )
+
+  print(key_pem.decode())
+
+  # with open('key.pem', 'wb') as f: f.write(key_pem)
+  # with open('key.pem') as f: pem_key = f.read()
+
+  key2 = serialization.load_pem_private_key(key_pem, b'passwd')
+#+end_src
+
+#+RESULTS:
+#+begin_example
+-----BEGIN RSA PRIVATE KEY-----
+Proc-Type: 4,ENCRYPTED
+DEK-Info: AES-256-CBC,7DA9292590A0AE3785B27F0673B98D19
+
+fB+cqppQmIne/KYb0NrxNBXYqJpwBfx0rFXygZqp74wCoECLJnsPU18AM5O80I7K
+QZSeOVAkjIaMvLCaiEy8blqCR4r2kYHDSE2jeggvEMIMFQZMF5Wkx69tXoOVS/rY
+OIGcGf+SxlBNr+Ihb2oKfWTJiZd8g68E8qgeUHoOzig6UJbUDlLVesl2pvLWy23L
+uf3lJwjHKomeL/1mhin0deH7aPHytXJ5/32Wm/gXF0qvJkNrxFpKrhTyVkfMxEi0
+FzX4wnNfXZyPQj3TVC4mBudDlt+olzQ6WPAvIjVICKGfev71YGUANsAqnM3rbiNw
+f/CShTO4Uv6PGjnxA3Ldq1HzwMNLIhCb05HV7h+S5X5ghiyD+Z+vurCPou+NTJtM
+C0fA2DG2xH36ScDKrh742uQPyOmljd0eJWUNO1ZY1Mb4kxoKdkaHZJ0e7+gjl9+T
+6b/S+ISQtgDKKLoFLZ1PKipi4iboFISjOdLrD6r6JqcMMuAknzxFWkVFmPYOlyg+
+odc3SpVMn2MO0HSI0+IswajfbIcRL62GC1khLZjQqgwN18EJ7z42ZKPCf/fPpk0m
+c5UqPnrSYS/4CcRtGcg0EzfzVdspfL1+i2mBO63YwZfvjAcJEwasy7oPNB2rFCDE
++0YdPl/8bIF2Z4PActQtrmV9kbnZRJRHfrm+ioI3QodqujwWozkOqs1xzW0GMwOf
+FQb5lq0PqP3u+rODwsZ2H9MXiro1pNfjad8lsb/XxQZso5Gg7zKpNlo7FKzThouZ
+pgHSZFQ/mtVPztrzuSgFNnmTNBv4eKQrKVLn4KXXTp3v5ICHq5Jq+OEbp7gRgjun
+uTbHdHzY4nFkM2uEyzMcxriEgFgHf4ilubqVvmNuhyW4ntHK5I7AMQbQnrtPZmBA
+U9IQz6XsSVpuW+Iwq9AiBQxkTZAT0l36wUpV9CVee/kk7dutVnjNneoFbtWpOPfH
+H6IxkObRbi5mm18rUQkAIXeUYeTf+ummTSzpmWb3iWHHSTNxADxkFobLthkFqvuZ
+plXzAXJI1aAWAn07uoU9rPfKjv/EkvgFU/ir7zyfBSiMWIsETHubad/rUPJ1tv+8
+cQrjameDkmeCMnGoPdbso4U6g0k5L/UEa1W6iE7ILp5hkx4RLVALEeotqvLzTY6a
+8vtT4Cu+/M1Ulu3swhsalFzs+dsmqoXKyLwUQqMxU1l/90HtL/KCNL2CIuXSmPxZ
+LmjMQWohNIvl3IBuwWsYfTrt8zHCeEgna8mB82ygq4uW2BTmLcynMhQNBs3hnce/
+JfVmSTsb8llI/lL2p7t0eb7qLBmnuSksDK2uSK9MWeofocAf8ky/R9eZN3kfGnH4
+T8G9og6N4BZm3DcuhvkxFIDqvraLPJHQ7EbyRDuaZhWvxL22PP+AIpIltIcPXUHU
+igJYqZ7f4f2Id31eP2LINsfhiVzEZIRrrJYKLEh7SHfi3ji5SktLGgSSEnvqQDE1
+sgamGpTa32qtYLa8DIufi+Ndxwb3WctQ2T1VwVOcmRtIrhNfaotpy0LVmFeVEu8M
+RqSVWmEYtON4gLbH9qx7egFoCk/jmRBw9rVjWOevZgn+ln7+Eelb6mGmy7rfxVB1
+-----END RSA PRIVATE KEY-----
+#+end_example
+
+#+begin_src python
+  from cryptography import x509
+  from cryptography.x509.oid import NameOID
+  from cryptography.hazmat.primitives import hashes
+  from cryptography.hazmat.primitives.asymmetric import rsa
+
+  key = rsa.generate_private_key(
+      public_exponent=65537,
+      key_size=2048,
+  )
+
+  csr = x509.CertificateSigningRequestBuilder().subject_name(x509.Name([
+      x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
+      x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, "California"),
+      x509.NameAttribute(NameOID.LOCALITY_NAME,"San Francisco"),
+      x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Mozilla"),
+      x509.NameAttribute(NameOID.COMMON_NAME, "www.mozilla.org"),
+  ])).add_extension(
+      x509.SubjectAlternativeName([
+          x509.DNSName("www.mozilla.org"),
+      ]),
+      critical=False,
+  ).sign(key, hashes.SHA256())
+
+  csr_pem = csr.public_bytes(serialization.Encoding.PEM)
+
+  csr2 = x509.load_pem_x509_csr(csr_pem)
+
+  print(csr_pem.decode())
+#+end_src
+
+#+RESULTS:
+#+begin_example
+-----BEGIN CERTIFICATE REQUEST-----
+MIIC2DCCAcACAQAwZjELMAkGA1UEBhMCVVMxEzARBgNVBAgMCkNhbGlmb3JuaWEx
+FjAUBgNVBAcMDVNhbiBGcmFuY2lzY28xEDAOBgNVBAoMB01vemlsbGExGDAWBgNV
+BAMMD3d3dy5tb3ppbGxhLm9yZzCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoC
+ggEBAMjaBnrYaKxjCXMkZWPCmQ3Rt2QvlVaBqsSMmNvndVqmL11eDNyo2rQaTRO5
+wa5KxU6W6bA1i2CPuHTqm1pjLgpOB4Ct2ddzPpInbUtyqQX8GA3ftBwts62amtHV
+B6UmJ1B8v3f4GgBxXEvVpSaND+ia8+1b6G5w1Ade1t7xZzwmE2y57jVWo+WBmc+N
+iqReQyl2xrTlxsJVnX4XRTuMyU8UdPzcHsn1/9LDgfGkx8WWfHCI0BfYgO16FwMx
+FPnViBS4Qu/p/BrEvq2ing0ebGgOnASQsJJc66a07cRn3dElyWaQJ8cdnH+jZnjr
+PYc80P5SbyzG2pmFSEOynGJU4rMCAwEAAaAtMCsGCSqGSIb3DQEJDjEeMBwwGgYD
+VR0RBBMwEYIPd3d3Lm1vemlsbGEub3JnMA0GCSqGSIb3DQEBCwUAA4IBAQAVlf+k
+Y2E/J/Pg+zYYj84qQDxpcSGFKloDLbAT55nYCtruabx8vuvJfBY0eMITgZJNBS2U
+BEK9F1FzfTq9P7zN94f05PIShI4MsqJ2oaoxfdo7HaszToQMaRY61/BRrQx+jLCI
+i/Plfi9C9QqzXY5IFTWXrhWeqJfnsNp4IHYR71dBu9x3lf1zdgd6saeJq5zDnS1a
+U8YzDCRnelf3DOZzEZ3R0+oorUJnRRTBBfbPuCdJL+RJrhBE7HNzFqcVZrpkd/Dx
+tpLEfg/L5DkBTLCs+AXsjNB67uyJiYMyzPT4ASN7PXQjZdmNL15pLxJw8ypLURfo
+TMNFuu6fvR8znRql
+-----END CERTIFICATE REQUEST-----
+#+end_example
+
+#+begin_src python
+  import datetime
+
+  key = rsa.generate_private_key(
+      public_exponent=65537,
+      key_size=2048,
+  )
+
+  subject = issuer = x509.Name([
+      x509.NameAttribute(NameOID.COUNTRY_NAME, 'US'),
+  ])
+
+  # csr: certificate sining request builder
+  # self signed: certificate builder
+  cert = x509.CertificateBuilder().subject_name(
+      subject
+  ).issuer_name(
+      issuer
+  ).public_key(
+      key.public_key()
+  ).serial_number(
+      x509.random_serial_number()
+  ).not_valid_before(
+      datetime.datetime.utcnow()
+  ).not_valid_after(
+      datetime.datetime.utcnow() + datetime.timedelta(days=10) 
+  ).add_extension(
+      x509.SubjectAlternativeName([
+          x509.DNSName('www.mozilla.org'),
+      ]),
+      critical=False,
+  ).sign(key, hashes.SHA256())
+
+  ca_pem = cert.public_bytes(serialization.Encoding.PEM)
+
+  cert2 = x509.load_pem_x509_certificate(ca_pem)
+
+  print(ca_pem.decode())
+#+end_src
+
+#+RESULTS:
+#+begin_example
+-----BEGIN CERTIFICATE-----
+MIICxjCCAa6gAwIBAgIUIi0nChs69fyRq6yMBxaMbQmmIe0wDQYJKoZIhvcNAQEL
+BQAwDTELMAkGA1UEBhMCVVMwHhcNMjEwMzEwMTgyODI5WhcNMjEwMzIwMTgyODI5
+WjANMQswCQYDVQQGEwJVUzCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEB
+AL3f+l8P4hWyv+20GlG2GIDWNOa++y+jFovxphOEBfjnwwO1I/c+FpKek81KAtV7
+ITGlkzPKcex/rvGczU5ow9aqW1ZFn27PUPa6DWFGVNK1VA27QoBec/vRSNPeGrm/
+sPemSeAouPhXT1HCbVszDKHnE++CI+XA7P2BlbNmqDlRsch5XFxyg4z4jgQQXZtj
+/7/Umu/1SKHg72M9hKZwNTbqw+cMUCIWSVty4rVNYBTF9HNSNmTzBLkszM5ZkiHX
+VYykWlCQDNH/LJaVQC8XGxjzMSQP2r9Y9aYndDMJJGa7caPMEdjhUXxnK7fcZj+a
+KZMz5SyYlQwAwjTK/gbUDicCAwEAAaMeMBwwGgYDVR0RBBMwEYIPd3d3Lm1vemls
+bGEub3JnMA0GCSqGSIb3DQEBCwUAA4IBAQAZXZCiNYevc5+ZB4jKvf3bHaf++6gO
+KadkIZBvrB4LzmoBy7flxCEyX+QBhrW3HlJvKk8J3RC79vYyT2UtqfH5hYS5Labq
+/3lbNDIdCW4wkLWg4MnJXZ5B3cfk9VQa4D7N0DzGB3ACvDD4KAdW6fYMKDJa1wEH
+HjqIlMBzSCQPT0oiglAyp3sJkdfxNtxphelWmWZouz00O1Ki9BBdD70jwWvRAXbo
+Z28s/+P9COGY2yP7o914s+9eahdIgZsC70aUlVXo1Pxw9CqF3O0+QQzbcoKxvEeb
+z//ABY57WRjLdlMNf8TvmyslzD0UBgAGAiZ9eb6BJfSulhnkpv1flMxH
+-----END CERTIFICATE-----
+#+end_example
